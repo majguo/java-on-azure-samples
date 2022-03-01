@@ -84,6 +84,8 @@ kind: OpenLibertyApplication
 metadata:
   name: lg-sample
   namespace: ${APP_NAMESPACE}
+  labels:
+    app: demo
 spec:
   replicas: 3
   applicationImage: docker.io/majguo/javaee-cafe:1.0.25
@@ -101,8 +103,27 @@ spec:
             operator: In
             values:
             - ${NODE_LABEL_VALUE}
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - demo
+          topologyKey: topology.kubernetes.io/zone
+      - weight: 90
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: app
+              operator: In
+              values:
+              - demo
+          topologyKey: kubernetes.io/hostname
 EOF
-
 ```
 
 ## Verification and cleanup
