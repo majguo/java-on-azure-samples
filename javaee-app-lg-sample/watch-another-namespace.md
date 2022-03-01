@@ -1,6 +1,6 @@
 # Watch Another Namespace
 
-The guidance decribes the steps on how to install Open Liberty Operator v0.8.0 using kubectl and make it watch **another namespace** on events including if there're any resources with type as Open Liberty Operatro supported CRDs created, updated or deleted. Besides, it also includes the instructions on how to create a user node pool, where you can install the Open Liberty Operator and sample application using `nodeAffinity`.
+The guidance decribes the steps on how to install Open Liberty Operator v0.8.0 using kubectl and make it watch **another namespace** on events including if there're any resources with type as Open Liberty Operatro supported CRDs created, updated or deleted. Besides, it also includes the instructions on how to create a user node pool, where you can install the Open Liberty Operator and sample application using `nodeAffinity`, as well as how to evenly distribute pods to nodes in different zones for high availability using `podAntiAffinity`.
 
 ## Create an AKS cluster 1.22.6 and add a user node pool with 3 nodes
 
