@@ -67,6 +67,7 @@ cat openliberty-app-operator.yaml \
     | sed -e "s/OPEN_LIBERTY_WATCH_NAMESPACE/${WATCH_NAMESPACE}/" \
     | kubectl apply -n ${OPERATOR_NAMESPACE} -f -
 
+rm -rf openliberty-app-operator.yaml
 ```
 
 ## Deploy a sample `OpenLibertyApplication` app on the user node pool
