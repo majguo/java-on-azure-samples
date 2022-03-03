@@ -42,7 +42,7 @@ To successfully complete the sample, you need to have an Azure AD instance, and 
 Now you're ready to checkout and run the sample application of this repo to verify if the connection initiated by your application to the Azure SQL database can be successfully authenticated using `ActiveDirectoryPassword` authentication mode.
 
 1. Check out [this repo](https://github.com/majguo/java-on-azure-samples) to a target directory.
-1. Locate to that directory and then change directory its sub-directory `sql-auth-aad-password`.
+1. Locate to that directory and then change to its sub-directory `sql-auth-aad-password`.
 1. Set environment variables for database connection with the values you wrote down before:
 
    ```bash
