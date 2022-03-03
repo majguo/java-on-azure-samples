@@ -1,4 +1,4 @@
-# Connect to Azure SQL with authentication `ActiveDirectoryPassword`
+# Connect to Azure SQL with authentication "ActiveDirectoryPassword"
 
 This sample shows you how to develop Java application that authenciates to the Azure SQL database with Azure Active Directory, using `ActiveDirectoryPassword` authentication mode.
 
