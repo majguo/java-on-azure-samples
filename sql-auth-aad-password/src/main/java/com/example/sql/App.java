@@ -11,10 +11,10 @@ public class App {
     public static void main(String[] args) throws Exception {
 
         SQLServerDataSource ds = new SQLServerDataSource();
-        ds.setServerName(System.getenv("DB_SERVER_NAME")); // Replace with your server name
-        ds.setDatabaseName(System.getenv("DB_NAME")); // Replace with your database
-        ds.setUser(System.getenv("DB_USER")); // Replace with your user name
-        ds.setPassword(System.getenv("DB_PASSWORD")); // Replace with your password
+        ds.setServerName(System.getenv("DB_SERVER_NAME"));
+        ds.setDatabaseName(System.getenv("DB_NAME"));
+        ds.setUser(System.getenv("DB_USER"));
+        ds.setPassword(System.getenv("DB_PASSWORD"));
         ds.setAuthentication("ActiveDirectoryPassword");
 
         try (Connection connection = ds.getConnection();
