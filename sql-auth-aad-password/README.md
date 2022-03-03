@@ -57,7 +57,7 @@ Now you're ready to checkout and run the sample application of this repo to veri
    mvn compile exec:java -Dexec.mainClass="com.example.sql.AADUserPassword"
    ```
 
-   You should see the similar message output in the console: "You have successfully logged on as: <azure-ad-admin-username>".
+   You should see the similar message output in the console: "You have successfully logged on as: `<azure-ad-admin-username>`".
 
 ## Run the containerized sample application
 
@@ -75,7 +75,7 @@ To run the application in a clean enviroment, you can containerze the app and ru
    cd target && java -jar sql-auth-aad-password-1.0-SNAPSHOT-jar-with-dependencies.jar && cd ..
    ```
 
-   You should see the similar message output in the console: "You have successfully logged on as: <azure-ad-admin-username>".
+   You should see the similar message output in the console: "You have successfully logged on as: `<azure-ad-admin-username>`".
 
 1. Build the image.
 
@@ -89,7 +89,7 @@ To run the application in a clean enviroment, you can containerze the app and ru
    docker run --rm -e DB_SERVER_NAME=<server-name>.database.windows.net -e DB_NAME=<database-name>-e DB_USER=<azure-ad-admin-username> -e DB_PASSWORD=<azure-ad-admin-pwd> sql-auth-aad-password:1.0
    ```
 
-   You should see the similar message output in the console: "You have successfully logged on as: <azure-ad-admin-username>".
+   You should see the similar message output in the console: "You have successfully logged on as: `<azure-ad-admin-username>`".
 ## References
 
 The sample refers to the following documentations:
