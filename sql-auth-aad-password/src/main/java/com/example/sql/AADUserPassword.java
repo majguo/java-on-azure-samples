@@ -6,7 +6,7 @@ import java.sql.Statement;
 
 import com.microsoft.sqlserver.jdbc.SQLServerDataSource;
 
-public class App {
+public class AADUserPassword {
 
     public static void main(String[] args) throws Exception {
 

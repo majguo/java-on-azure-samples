@@ -42,7 +42,7 @@
         <configuration>
           <archive>
             <manifest>
-              <mainClass>com.example.learning.AADUserPassword</mainClass>
+              <mainClass>com.example.sql.AADUserPassword</mainClass>
             </manifest>
           </archive>
           <descriptorRefs>
