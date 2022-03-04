@@ -102,3 +102,6 @@ More related references:
 
 * [Use Azure Active Directory authentication](https://docs.microsoft.com/azure/azure-sql/database/authentication-aad-overview)
 * [Azure SQL Database and Azure Synapse Analytics connectivity architecture](https://docs.microsoft.com/azure/azure-sql/database/connectivity-architecture)
+* [PKIX path building failed - unable to find valid certification path to requested target](https://techcommunity.microsoft.com/t5/azure-database-support-blog/pkix-path-building-failed-unable-to-find-valid-certification/ba-p/2591304)
+  * Download and import certificates from [PKI Repository (TLS) - Microsoft DSRE](https://www.microsoft.com/pki/mscorp/cps/default.htm)
+* [Configuring the client for encryption](https://docs.microsoft.com/sql/connect/jdbc/configuring-the-client-for-ssl-encryption?view=sql-server-ver15)
