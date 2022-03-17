@@ -34,7 +34,7 @@ To successfully complete the sample, you need to have an Azure AD instance, and 
      1. Wait until the deployment completes.
 1. If you already have an Azure SQL instance but it hasn't been configured with required settings:
    1. Refernece to [Provision Azure AD admin (SQL Database)](https://docs.microsoft.com/azure/azure-sql/database/authentication-aad-configure?tabs=azure-powershell#provision-azure-ad-admin-sql-database) to provision an Azure Active Directory administrator for your existing Azure SQL instance.
-   1. Sign into Azure portal > Type "Resrouce groups" in the search bar and click "Resrouce groups" displayed in the "Services" list. > Find your resource groups where the Azure SQL server and database were deployed. > Click to open.
+   1. Sign into Azure portal > Type "Resource groups" in the search bar and click "Resource groups" displayed in the "Services" list. > Find your resource groups where the Azure SQL server and database were deployed. > Click to open.
       1. Click the SQL server instance > Click "Firewalls and virtual networks" under "Security" > Verify and make changes accordingly to make sure "Deny public network access" is not checked, "Minimum TLS Version" is "1.2", "Connection policy" is "Default", "Allow Azure services and resources to access this server" is "Yes", and IP address of your client is added to firewall rules.
 
 ## Run the sample application locally
