@@ -75,7 +75,36 @@ Now you're ready to checkout and run the sample application of this repo to veri
    mvn liberty:dev -Ddb.server.name=${DB_SERVER_NAME} -Ddb.port.number=${DB_PORT_NUMBER} -Ddb.name=${DB_NAME} -Ddb.user=${DB_USER} -Ddb.password=${DB_PASSWORD}
    ```
 
-   Open http://localhost:9080 in the browser and you should see a UI where you can view, create and delete the coffees.
+   Open http://localhost:9080 in the browser and you should see a UI where you can view, create and delete the coffees. Press "Ctrl+C" to stop the application.
+
+## Run the sample application in local Docker
+
+To run the application in a clean enviroment, you can containerze the app and run it as a container if you have `Docker` installed locally.
+
+1. Set environment variables for image name and tag:
+
+   ```bash
+   export IMAGE=javaee-cafe-mssql-auth-aad-password
+   export TAG=1.0.0
+   ```
+
+1. Build the docker image:
+   
+   ```bash
+   # If you want to build the application image from Open Liberty base image
+   docker build -t ${IMAGE}:${TAG} --file=Dockerfile .
+   
+   # Alternatively uncomment the following line if you prefer to build the image from WebSphere Liberty base image
+   # docker build -t ${IMAGE}:${TAG} --file=Dockerfile-wlp .
+   ```
+
+1. Run the image in the local Docker:
+   
+   ```bash
+   docker run -it --rm -p 9080:9080 -e DB_SERVER_NAME=${DB_SERVER_NAME} -e DB_PORT_NUMBER=${DB_PORT_NUMBER} -e DB_NAME=${DB_NAME} -e DB_USER=${DB_USER} -e DB_PASSWORD=${DB_PASSWORD} ${IMAGE}:${TAG}
+   ```
+
+   Open http://localhost:9080 in the browser and you should see a UI where you can view, create and delete the coffees. Press "Ctrl+C" to stop the application.
 
 ## References
 
