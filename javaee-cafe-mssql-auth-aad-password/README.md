@@ -106,6 +106,94 @@ To run the application in a clean enviroment, you can containerze the app and ru
 
    Open http://localhost:9080 in the browser and you should see a UI where you can view, create and delete the coffees. Press "Ctrl+C" to stop the application.
 
+## Run the sample application on the AKS cluster
+
+First, create an Azure Container Registry (ACR) instance and push the application image.
+
+```bash
+# Create the resource group
+RESOURCE_GROUP_NAME=open-liberty-azuresql-aad-password
+az group create --name $RESOURCE_GROUP_NAME --location eastus
+
+# Create the ACR instance
+REGISTRY_NAME=lguniqueacrname
+az acr create --resource-group $RESOURCE_GROUP_NAME --name $REGISTRY_NAME --sku Basic --admin-enabled
+export LOGIN_SERVER=$(az acr show -n $REGISTRY_NAME --query 'loginServer' -o tsv)
+USER_NAME=$(az acr credential show -n $REGISTRY_NAME --query 'username' -o tsv)
+PASSWORD=$(az acr credential show -n $REGISTRY_NAME --query 'passwords[0].value' -o tsv)
+
+# Login to the ACR and push the application image
+docker login $LOGIN_SERVER -u $USER_NAME -p $PASSWORD
+docker tag ${IMAGE}:${TAG} ${LOGIN_SERVER}/${IMAGE}:${TAG}
+docker push ${LOGIN_SERVER}/${IMAGE}:${TAG}
+```
+
+Next, create an AKS cluster which attachs the created ACR instance:
+
+```bash
+# Create the AKS cluster
+CLUSTER_NAME=myAKSCluster
+az aks create --resource-group $RESOURCE_GROUP_NAME --name $CLUSTER_NAME --node-count 1 --generate-ssh-keys --enable-managed-identity --attach-acr $REGISTRY_NAME
+
+# Connect to the AKS cluster:
+az aks get-credentials --resource-group $RESOURCE_GROUP_NAME --name $CLUSTER_NAME --overwrite-existing
+```
+
+Then install Open Liberty Operator 0.8.0:
+
+```
+mkdir -p overlays/watch-all-namespaces
+wget https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/0.8.0/kustomize/overlays/watch-all-namespaces/olo-all-namespaces.yaml -q -P ./overlays/watch-all-namespaces
+wget https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/0.8.0/kustomize/overlays/watch-all-namespaces/cluster-roles.yaml -q -P ./overlays/watch-all-namespaces
+wget https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/0.8.0/kustomize/overlays/watch-all-namespaces/kustomization.yaml -q -P ./overlays/watch-all-namespaces
+mkdir base
+wget https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/0.8.0/kustomize/base/kustomization.yaml -q -P ./base
+wget https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/0.8.0/kustomize/base/open-liberty-crd.yaml -q -P ./base
+wget https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/0.8.0/kustomize/base/open-liberty-operator.yaml -q -P ./base
+kubectl apply -k overlays/watch-all-namespaces
+
+rm -rf overlays
+rm -rf base
+```
+
+Finally, deploy the sample application after creating a secret holding the database connection credentials:
+
+```bash
+# Create a namespace where the application will be located
+export NAMESPACE=open-liberty-demo
+kubectl create namespace ${NAMESPACE}
+
+# Create secret "db-secret-mariadb"
+envsubst < db-secret.yaml | kubectl apply -f -
+
+# Create OpenLibertyApplication "javaee-cafe-mssql-auth-aad-password"
+envsubst < openlibertyapplication.yaml | kubectl apply -f -
+
+# Check if OpenLibertyApplication instance is created
+kubectl get openlibertyapplication javaee-cafe-mssql-auth-aad-password -n ${NAMESPACE}
+
+# Check if deployment created by Operator is ready
+kubectl get deployment javaee-cafe-mssql-auth-aad-password -n ${NAMESPACE} --watch
+```
+
+Wait until you see `3/3` under the `READY` column and `3` under the `AVAILABLE` column, then press `CTRL-C` to stop the kubectl watch process.
+
+When the application is running, a Kubernetes load balancer service exposes the application front end to the internet.
+
+```bash
+kubectl get service javaee-cafe-mssql-auth-aad-password -n ${NAMESPACE}
+```
+
+Once the `EXTERNAL-IP` address is an actual public IP address, copy its value and open it in the browser. You should see a UI where you can view, create and delete the coffees.
+
+### Clean up the resources
+
+To avoid Azure charges, you should clean up resources once they're not used any longer. Use the `az group delete` command to remove the resource group, container service, container registry, and all related resources.
+
+```bash
+az group delete --name $RESOURCE_GROUP_NAME --yes
+```
+
 ## References
 
 The sample refers to the following documentations:
