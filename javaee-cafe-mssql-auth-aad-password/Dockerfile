@@ -1,7 +1,7 @@
 # open liberty base image
 FROM openliberty/open-liberty:kernel-java8-openj9-ubi
 
-# Add config, app and jdbc driver
+# Add config, app and other dependencies
 COPY --chown=1001:0 src/main/liberty/config/server.xml /config/server.xml
 COPY --chown=1001:0 target/javaee-cafe-mssql-auth-aad-password.war /config/apps/
 COPY --chown=1001:0 target/liberty/wlp/usr/shared/resources/accessors-smart-2.4.7.jar /opt/ol/wlp/usr/shared/resources/
