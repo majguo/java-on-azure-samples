@@ -1,5 +1,7 @@
-# open liberty base image
+# Open Liberty base image, both java8 & java11 images are supported
+# Comment line 3 and uncomment line 4 to build the application image with java11
 FROM openliberty/open-liberty:kernel-java8-openj9-ubi
+#FROM openliberty/open-liberty:kernel-java11-openj9-ubi
 
 # Add config, app and other dependencies
 COPY --chown=1001:0 src/main/liberty/config/server.xml /config/server.xml
