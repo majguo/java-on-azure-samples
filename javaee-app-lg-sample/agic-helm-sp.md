@@ -216,7 +216,7 @@ helm repo update
 kubectl apply -f https://raw.githubusercontent.com/oracle/weblogic-azure/main/weblogic-azure-aks/src/main/arm/scripts/appgw-ingress-clusterAdmin-roleBinding.yaml
 
 subID=<your-azure-subscription-id>
-spBase64String=$(az ad sp create-for-rbac --sdk-auth | base64 -w0)
+spBase64String=$(az ad sp create-for-rbac --role Contributor --sdk-auth | base64 -w0)
 azureAppgwIngressVersion="1.4.0"
 
 wget https://raw.githubusercontent.com/oracle/weblogic-azure/main/weblogic-azure-aks/src/main/arm/scripts/appgw-helm-config.yaml.template -O appgw-helm-config.yaml
