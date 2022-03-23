@@ -169,7 +169,7 @@ cat openliberty-app-operator.yaml \
 To deploy and run your Liberty application on the AKS cluster, containerize your application as a Docker image using [Open Liberty container images](https://github.com/OpenLiberty/ci.docker) or [WebSphere Liberty container images](https://github.com/WASdev/ci.docker).
 
 1. Clone the sample code for this guide. The sample is on [GitHub](https://github.com/Azure-Samples/open-liberty-on-aks).
-1. Locate to your local clone and run `git checkout lg-sample` to checkout branch `lg-sample`.
+1. Locate to your local clone and run `git checkout lg-engagement` to checkout branch `lg-engagement`.
 1. Run `cd javaee-app-lg-sample` to change directory to `javaee-app-lg-sample` of your local clone.
 1. Run `mvn clean package` to package the application.
 1. Run `mvn liberty:dev` to test the application. You should see `The defaultServer server is ready to run a smarter planet.` in the command output if successful. Use `CTRL-C` to stop the application.
