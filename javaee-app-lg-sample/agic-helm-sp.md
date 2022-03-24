@@ -74,6 +74,7 @@ You will need to create an AAG which will be used as the load balancer for your 
 wget https://raw.githubusercontent.com/oracle/weblogic-azure/main/weblogic-azure-aks/src/main/bicep/modules/_azure-resoruces/_appgateway.bicep -q -O appgateway.bicep
 
 # If The following command exited with error "Failed to parse 'appgateway.bicep', please check whether it is a valid JSON format", pls run `az upgrade` to upgrade Azure CLI
+# TODO: WARNING: A new Bicep release is available: v0.4.1318. Upgrade now by running "az bicep upgrade".
 result=$(az deployment group create -n testDeployment -g $RESOURCE_GROUP_NAME --template-file appgateway.bicep --parameters location=eastus)
 APPGW_NAME=$(echo $result | jq -r '.properties.outputs.appGatewayName.value')
 APPGW_VNET_NAME=$(echo $result | jq -r '.properties.outputs.vnetName.value')
@@ -180,7 +181,7 @@ curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/mast
     | kubectl apply -f -
 
 # Install the operator on the user node pool
-wget https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/master/deploy/releases/0.7.1/openliberty-app-operator.yaml -O openliberty-app-operator.yaml
+wget https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/master/deploy/releases/0.7.1/openliberty-app-operator.yaml -q -O openliberty-app-operator.yaml
 cat <<EOF >>openliberty-app-operator.yaml
       affinity:
         nodeAffinity:
@@ -215,11 +216,11 @@ helm repo update
 
 kubectl apply -f https://raw.githubusercontent.com/oracle/weblogic-azure/main/weblogic-azure-aks/src/main/arm/scripts/appgw-ingress-clusterAdmin-roleBinding.yaml
 
-subID=<your-azure-subscription-id>
+subID=$(az account show --query 'id' -o tsv)
 spBase64String=$(az ad sp create-for-rbac --role Contributor --sdk-auth | base64 -w0)
-azureAppgwIngressVersion="1.4.0"
+azureAppgwIngressVersion="1.5.1"
 
-wget https://raw.githubusercontent.com/oracle/weblogic-azure/main/weblogic-azure-aks/src/main/arm/scripts/appgw-helm-config.yaml.template -O appgw-helm-config.yaml
+wget https://raw.githubusercontent.com/oracle/weblogic-azure/main/weblogic-azure-aks/src/main/arm/scripts/appgw-helm-config.yaml.template -q -O appgw-helm-config.yaml
 sed -i -e "s:@SUB_ID@:${subID}:g" appgw-helm-config.yaml
 sed -i -e "s:@APPGW_RG_NAME@:${RESOURCE_GROUP_NAME}:g" appgw-helm-config.yaml
 sed -i -e "s:@APPGW_NAME@:${APPGW_NAME}:g" appgw-helm-config.yaml
