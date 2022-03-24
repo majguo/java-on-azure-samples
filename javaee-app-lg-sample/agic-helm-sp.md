@@ -123,6 +123,7 @@ To successfully communicate between the AAG and AKS cluster, we will need to cre
 
 ```azurecli-interactive
 aksMCRGName=$(az aks show -n $CLUSTER_NAME -g $RESOURCE_GROUP_NAME -o tsv --query "nodeResourceGroup")
+# Randomly found that vNet resource can't be retrieved from the AKS node resource group with the following command initially. After a few minutes, it's retrived finally.
 aksNetWorkId=$(az resource list -g ${aksMCRGName} --resource-type Microsoft.Network/virtualNetworks -o tsv --query '[*].id')
 aksNetworkName=$(az resource list -g ${aksMCRGName} --resource-type Microsoft.Network/virtualNetworks -o tsv --query '[*].name')
 az network vnet peering create --name aks-appgw-peer --remote-vnet ${aksNetWorkId} --resource-group ${RESOURCE_GROUP_NAME} --vnet-name ${APPGW_VNET_NAME} --allow-vnet-access
