@@ -1,6 +1,6 @@
-# Deploying a disaster recovery solution of WebLogic on Azure VMs
+# Deploying a filesystem based disaster recovery solution of WebLogic on Azure VMs
 
-This guide instructus how you can create an environment to demonstrate the disaster recovery solution of WebLogic on Azure VMs:
+This guide instructus how you can create an environment to demonstrate the filesystem based disaster recovery solution of WebLogic on Azure VMs:
 
 ![Solution architecture for disaster recovery of WebLogic on Azure VMs](./media/DR_Solution_WebLogic_On_Azure.png)
 
@@ -308,9 +308,9 @@ Next, build and package a sample CRUD JavaEE application that can be used for de
 
 1. Checkout this repository.
 1. Locate the path where the repository was downloaded.
-1. Change to its sub-dirctory `dr-filesystem/weblogic-cafe`.
+1. Change to its sub-dirctory `wls-dr-filesystem/weblogic-cafe`.
 1. Compile and package the sample application: `mvn -Dregion="East US" clean package`.
-1. The package should be successfully generated and located at `<your local clone of the repo>/dr-filesystem/weblogic-cafe/target/weblogic-cafe.war`. If you don't see this, you must troubleshoot and resolve the reason why before continuing.
+1. The package should be successfully generated and located at `<your local clone of the repo>/wls-dr-filesystem/weblogic-cafe/target/weblogic-cafe.war`. If you don't see this, you must troubleshoot and resolve the reason why before continuing.
 
 Now you can deploy it to the WebLogic cluster.
 
@@ -409,7 +409,7 @@ Before the user requests are rounted from the degraded active cluster to the pas
    1. Select "PowerShell" for "Runbook type".
    1. Select "7.1 (Preview)" for "Runtime version".
    1. Click "Create". Wait until it completes. You will be re-directed to edit window of the new created runbook.
-   1. Open file `<your local clone of the repo>/dr-filesystem/runbooks/start-secondary-cluster.ps1` in your local editor, copy and paste its content to the runbook edit window.
+   1. Open file `<your local clone of the repo>/wls-dr-filesystem/runbooks/start-secondary-cluster.ps1` in your local editor, copy and paste its content to the runbook edit window.
    1. Click "Save". Click "Publish". Click "Yes" to confirm the publish.
 
 ### Create alert rule for triggering failover actions 
