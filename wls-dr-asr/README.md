@@ -1,4 +1,4 @@
-# Deploying a ASR based disaster recovery solution of WebLogic on Azure VMs
+# Deploying an ASR based disaster recovery solution of WebLogic on Azure VMs
 
 This guide instructus how you can create an environment to demonstrate the Azure Site Recovery (ASR) based disaster recovery solution of WebLogic on Azure VMs:
 
