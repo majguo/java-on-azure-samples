@@ -1,0 +1,568 @@
+# Deploying a ASR based disaster recovery solution of WebLogic on Azure VMs
+
+This guide instructus how you can create an environment to demonstrate the Azure Site Recovery (ASR) based disaster recovery solution of WebLogic on Azure VMs:
+
+![Solution architecture for disaster recovery of WebLogic on Azure VMs](./media/DR_Solution_WebLogic_On_Azure.png)
+
+The solution uses [ASR](https://docs.microsoft.com/azure/site-recovery/site-recovery-overview) to replicates workloads running on virtual machines (VMs) from a primary site to a secondary location when an outage occurs. It also uses the [WebLogic JDBC persistent store](https://docs.oracle.com/en/middleware/standalone/weblogic-server/14.1.1.0/store/overview.html#GUID-EF63DF13-EA0A-4D65-9883-B03381A79F0B) to persist application data and various server data (session data, TLOG, etc.). As these data will be asychronouslly repliated to the secondary database server connected by a passive cluster in a different region, they can be retrieved back once the passive cluster is promoted to a primary one in a disaster recovery event.
+
+## Prerequisites
+
+Make sure the following prerequisites are satisfied before you move on to next steps.
+
+1. You will need an Azure subscription. If you don't have one, you can get one for free for one year [here](https://azure.microsoft.com/free).
+1. Install a Java SE implementation (for example, [AdoptOpenJDK OpenJDK 8 LTS/OpenJ9](https://adoptopenjdk.net/?variant=openjdk8&jvmVariant=openj9)).
+1. Install [Maven](https://maven.apache.org/download.cgi) 3.5.0 or higher.
+1. Download this repository somewhere in your file system (easiest way might be to download as a zip and extract).
+
+## Setting up Managed PostgreSQL databases on Azure
+
+You will be using the fully managed PostgreSQL offering in Azure to persist application data, session data, and JTA Transaction Log (TLOG) for this demo. Below is how you set it up.
+
+### Setting up the primary replica of database server
+
+The primary replica will be located in East US region, and connected to the active WebLogic cluster which will be also deployed in East US region later.
+
+1. Go to the [Azure portal](http://portal.azure.com).
+1. Select 'Create a resource'. In the search box, enter and select 'Azure Database for PostgreSQL'. Hit Create. Select a single server.
+  1. The steps in this section use `<your prefix>`. The prefix could be your first name.  It's suggested to be short, reasonably unique, and less than 10 characters in length.
+1. Create and specify a new resource group named `<your prefix>`-demo-postgres. 
+1. Specify and log down the Server name to be `<your prefix>`-demo-eastus.
+1. Specify the location to be **East US**.
+1. Leave the Version at its default.
+1. Specify and log down the Admin username to be `demouser`. 
+1. Specify and log down the Password to be `<your unique password>`. 
+1. Hit 'Review+create' then 'Create'. Wait until the deployment completes.
+1. Click "Go to resource".
+1. Under Settings, open the "Connection security" panel.
+   1. Toggle "Allow access to Azure services" to "Yes"
+   1. Click "+ Add current client IP address". Set the last 4 digits of "Start IP" to `0`, and the last 4 digits of "End IP" to `255`. 
+   1. Toggle "Enforce SSL connection" to "DISABLED". 
+   1. Hit Save. Wait until it completes.
+
+### Setting up the secondary replica of the data store
+
+The sencondary replica will be located in West US region, and connected to the passive WebLogic cluster which will be also deployed in West US region later.
+
+1. Under Settings of the PostgreSQL server (`<your prefix>`-demo-eastus) you created in the previous step, open the "Replication" panel.
+   1. Click "Add Replica" 
+   1. Specify and log down the Server name to be `<your prefix>`-demo-westus.
+   1. Specify the location to be **West US**.
+   1. Hit OK. Wait until the deployment completes.
+1. Once it completes, click "Go to resource" and toggle "Allow access to Azure services" to "Yes" in "Settings > Connection security" panel for the PostgreSQL server (`<your prefix>`-demo-westus), then Save. Wait until it completes.
+
+### Setting up tables for session data and TLOG 
+
+You need to create tables to store sessions data and TLOG. This guide uses `psql` in Ubuntu as PostgreSQL client. You can use any other alternative per your need.
+
+1. Install PostgreSQL client on Ubuntu:
+   
+   ```
+   wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+   echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" | sudo tee  /etc/apt/sources.list.d/pgdg.list
+   sudo apt update
+   sudo apt -y install postgresql-client-12
+   ```
+
+1. Connect to the PostgreSQL server and create table:
+   
+   ```
+   psql -h <your prefix>-demo-eastus.postgres.database.azure.com -p 5432 -d postgres -U demouser@<your prefix>-demo-eastus -W
+   ```
+
+   In the prompt, type `<your unique password>` to sign. You will enter into the interaction mode if signed successfully. If not, you must troubleshoot and resolve the reason why before continuing.
+   
+   In the interactive mode, copy and paste the following content, then hit `Enter` key to commit the command which creates table`wl_servlet_sessions`:
+
+   ```
+    create table wl_servlet_sessions
+        ( wl_id VARCHAR(100) NOT NULL,
+        wl_context_path VARCHAR(100) NOT NULL,
+        wl_is_new CHAR(1),
+        wl_create_time DECIMAL(20),
+        wl_is_valid CHAR(1),
+        wl_session_values BYTEA,
+        wl_access_time DECIMAL(20),
+        wl_max_inactive_interval INTEGER,
+        PRIMARY KEY (wl_id, wl_context_path));
+   ```
+
+1. Next, you're going to create number of tables named as `TLOG_msp<n>_WLStore` for persistin TLOG for each managed server of the cluster. In this demo, the WebLogic cluster we're going to create consists of two managed servers, so two tables `TLOG_msp1_WLStore` and `TLOG_msp2_WLStore` will be created. Copy and paste the following content, then hit `Enter` key to commit the command which creates table`TLOG_msp1_WLStore`:
+
+   ```
+    create table TLOG_msp1_WLStore
+        ( ID DECIMAL(38) NOT NULL,
+        TYPE DECIMAL(38) NOT NULL,
+        HANDLE DECIMAL(38) NOT NULL,
+        RECORD BYTEA NOT NULL,
+        PRIMARY KEY (ID));
+   ```
+
+   Copy and paste the following content, then hit `Enter` key to commit the command which creates table`TLOG_msp2_WLStore`:
+
+   ```
+    create table TLOG_msp2_WLStore
+        ( ID DECIMAL(38) NOT NULL,
+        TYPE DECIMAL(38) NOT NULL,
+        HANDLE DECIMAL(38) NOT NULL,
+        RECORD BYTEA NOT NULL,
+        PRIMARY KEY (ID));
+   ```
+
+## Setting up WebLogic clusters on Azure
+
+The next is to set up two WebLogic clusters in East US and West US regions. The active cluster in East US is running and handing the requests routed by the Traffic Manager, and the passive cluster in West US is disabled which means VMs will be deleted after initial creation but they will be created by ASR on the fly and promoted to primary cluster if failover occurs due to the outage of the active cluster.
+
+### Deploy the active WebLogic cluster
+
+Follow the steps below to set up the 1st WebLogic cluser in East US region which acts as an active cluster.
+
+1. Go to the [Azure portal](https://ms.portal.azure.com/).
+1. Use the search bar on the top to navigate to the Marketplace.
+1. In the Marketplace, type in "Oracle WebLogic Server Cluster" in the search bar and click Enter.
+1. Locate the offer named "Oracle WebLogic Server Cluster" and click.
+1. Click Create.
+1. In the "Basics" page:
+   1. Create and specify a new resource group named `<your prefix>`-demo-wls-cluster-eastus.
+   1. Select the Region to be **East US**.
+   1. Specify and confirm "Password" for admin account of VMs. Log down the user name and password in case you want to sign into the operating system of WebLogic server VM after the deployment.
+   1. Specify and confirm "Password for WebLogic Administrator". Log down the user name and password as the credential will be used for signing into WebLogic Admin console later.
+   1. Speicify 3 for "Number of VMs", which means the cluster consists of 1 admin node and 2 managed nodes.
+   1. Click Next.
+1. In the "TLS/SSL Configuration" page, click Next.
+1. In the "Azure Application Gateway" page:
+   1. Select "Yes" for "Connect to Azure Application Gateway".
+   1. Select "Generate a self-signed certificate" for "Select desired TLS/SSL certificate option"
+   1. Add a user-assigned managed identity for "User assigned managed identity". If you don't have a user-assigned managed identity, open Azure portal in a new tab and [create one](https://docs.microsoft.com/azure/active-directory/managed-identities-azure-resources/how-manage-user-assigned-managed-identities?pivots=identity-mi-methods-azp#create-a-user-assigned-managed-identity), then return here to continue.
+   1. Click Next.
+1. In the "DNS Configuration" page, click Next.
+1. In the "Database" page:
+   1. Select "Yes" for "Connect to database?".
+   1. Select "Azure database for PostgreSQL" for "Choose database type".
+   1. Specify `jdbc/WebLogicCafeDB` for "JNDI Name". Note: this value determines the data source name used in the sample application.
+   1. Specify `jdbc:postgresql://<your prefix>-demo-eastus.postgres.database.azure.com:5432/postgres` for "DataSource Connection String".
+   1. Select `None` for "Global transactions protocol".
+   1. Specify `demouser@<your prefix>-demo-eastus` for "Database username".
+   1. Specify and confirm `<your unique password>` that you logged down before for "Database Password".
+   1. Click "Review + create".
+1. In the "Review + create" page:
+   1. You must see "Validation passed". Otherwise you must troubleshoot and resolve the reason why before continuing.
+   1. Click Create.
+1. It will take some time for the WebLogic cluster to properly deploy. Wait until it completes.
+1. In the deployment page:
+   1. Click "Outputs".
+   1. Copy value of property "appGatewayURL" > Open it in a new browser tab > You should see "Error 404--Not Found". If not, you must troubleshoot and resolve the reason why before continuing.
+   1. Copy and log down value of property "adminConsole" > Open it in a new browser tab > You should see login page of "WebLogic Server Administratiion Console" > Sign into the console with the user name and password for WebLogic administrator. If you are not able to sign, you must troubleshoot and resolve the reason why before continuing.
+1. Click "Overview" to switch back Overview page of the deployment. Click "Go to resource group".
+   1. Find resource "gwip" with type "Public IP address" > Click to open > Copy and log down value of "IP address".
+   1. Find resource "myAppGateway" with type "Application gateway" > Click to open > Open "Backend pools" under Settings > Click to open "myGatewayBackendPool" > Copy and log down ip addresses in column **Target** from Backend targets table.
+
+### Deploy the passive WebLogic cluster
+
+Follow the same steps in section [Deploy the active WebLogic cluster](#deploy-the-active-weblogic-cluster) to deploy the 2nd WebLogic cluser in West US region which acts as a passive cluster, except the following differences/highlights:
+
+1. In the "Basics" page:
+   1. Create and specify a new resource group named `<your prefix>`-demo-wls-cluster-westus.
+   1. Select the Region to be **West US**.
+1. In the "Database" page:
+   1. Specify `jdbc:postgresql://<your prefix>-demo-westus.postgres.database.azure.com:5432/postgres` for "DataSource Connection String".
+   1. Specify `demouser@<your prefix>-demo-westus` for "Database username".
+
+### Additional settings
+
+First, change to **Static** for private IP address setting for all Regular Network Interfaces in the active cluster.
+
+1. In the portal, go to 'All resources'. Enter `<your prefix>`-demo-wls-cluster-eastus into the filter box and press Enter.
+1. Set filter "Type == Regular Network Interface" > Apply > You should see 3 regular network interfaces listed.
+1. For each of regular network interface, do the following steps:
+   1. Click to open regular network interface pae.
+   1. Open **IP configurations** page under Settings. Click `ipconfig1` to open the configuration.
+   1. Select **Static** assignment for Private IP address settings. Click Save. Wait until it completes.
+
+Next, delete VMs, regular network interfaces and disks in the passive cluster as they will be re-created on the fly by ASR in a fail over event if the outage of active cluster occurs.
+
+1. In the portal, go to 'All resources'. Enter `<your prefix>`-demo-wls-cluster-westus into the filter box and press Enter.
+1. Set filter "Type == Virtual machine" > Apply > You should see 3 VMs listed. Select all of them > Click Delete > Type `yes` to confirm > Click Delete.
+1. Set filter "Type == Disk" > Apply > You should see 3 disks listed. Select all of them > Click Delete > Type `yes` to confirm > Click Delete.
+1. Set filter "Type == Regular Network Interface" > Apply > You should see 3 regular network interfaces listed. Select all of them > Click Delete > Type `yes` to confirm > Click Delete.
+
+Finally, compare the ip addresses of backend targets you logged down for the Application gateways in both active and passive clusters:
+
+1. If they're same, no action required.
+1. Otherwise, replace ip addresses of backend targets for the Application gateway in the passive cluster with the ones for the Application gateway in the active cluster.
+
+## Setting up Azure Traffic Manager
+
+You will be using the Azure Traffic Manager to route the user requests to the active WebLogic cluster deployed on East US region or the passive cluster deployed on West US region.
+
+1. Go to the [Azure portal](http://portal.azure.com).
+1. Select 'Create a resource'. In the search box, enter and select 'Traffic Manager profile'. Hit Create.
+1. Specify `<your prefix>`-demo for "Name".
+1. Select "Priority" for "Routing method".
+1. Select appropirate subscription.
+1. Create and specify a new resource group named `<your prefix>`-demo-traffic-manager. 
+1. Hit 'Create'. Wait until the deployment completes. Click "Go to resource".
+1. Under Settings, open the "Configuration" panel. You're going to configure probing settings.
+   1. Set `200-404` for "Expected Status Code Ranges".
+   1. Select `10` for "Probing internal".
+   1. Set `1` for "Tolerated number of failures".
+   1. Set `5` for "Probe timeout".
+   1. Hit Save. Wait until it completes.
+1. Under Settings, open the "Endpoints" panel. You're going to add two Azure endopoints.
+   1. Click "+Add".
+   1. Select "Azure endpoint" for "Type".
+   1. Specify "gw-eastus" for "Name".
+   1. Select "Public IP address" for "Target resource type".
+   1. Find out the copied public IP address of `gwip` in section [Deploy the active WebLogic cluster](#deploy-the-active-weblogic-cluster), then select the matched item from the list for "Public IP address".
+   1. Hit Add. Wait until it completes.
+   1. Click "+Add" again to add another Azure endpoint using the copied value of public IP address deployed in the **West US** region by following the same steps above, but set "gw-westus" for "Name" and select right item for "Public IP address". Make sure the value of Priority is 2.
+   1. Wait until the value of "Monitoring status" for both endpoints are changed from "Checking endpoint" to "Online". You can manually click Refresh to update the status.
+1. Switch back to "Overview" panel, find and copy the value for "DNS name", open a new tab of the browser, paste the copied value into the address bar, and hit `Enter` key. You should see "Error 404--Not Found". If not, you must troubleshoot and resolve the reason why before continuing. 
+
+## Configuring WebLogic clusters
+
+The next is to configure the active WebLogic clusters for disaster recovery. It includes deployment of a sample app, updating Frontend Host of the cluster, and confiugration of TLOG.
+
+### Sign in to WebLogic Server Administratiion Console
+
+Find out the copied value of "adminConsole" and credentials of "WebLogic Administrator" in section [Deploy the active WebLogic cluster](#deploy-the-active-weblogic-cluster), open it in a new browser tab, and sign in.
+
+### Deploy sample app
+
+Next, build and package a sample CRUD JavaEE application that can be used for demonstrating if the solution of disaster recovery works later.
+
+1. Checkout this repository.
+1. Locate the path where the repository was downloaded.
+1. Change to its sub-dirctory `wls-dr-asr/weblogic-cafe`.
+1. Compile and package the sample application: `mvn clean package`.
+1. The package should be successfully generated and located at `<your local clone of the repo>/wls-dr-asr/weblogic-cafe/target/weblogic-cafe.war`. If you don't see this, you must troubleshoot and resolve the reason why before continuing.
+
+Now you can deploy it to the WebLogic cluster.
+
+1. Make sure you have signed in to WebLogic Server Administratiion Console for the active cluster.
+1. Locate to "Domain structure > wlsd > Deployments" in the left navigation area. Click "Deployments".
+1. Click Lock & Edit > Install > Upload your file(s) > Choose File >  Select "weblogic-cafe.war" you prepared above > Next > Next > Next > Select "cluster1" with option "All servers in the cluster" as deployment target. Click Next > Finish > Activate Changes.
+1. Switch to Control > Select "weblogic-cafe" > Click "Start" with option "Servicing all requests" > Wait for a while and refresh the page, until you see the state is Active > Switch to Monitoring > Copy value of Context Root. It should be "/weblogic-cafe".
+
+### Change Frontend Host to DNS name of traffic manager
+
+Since the Azure Traffic Manager is sitting at the front of two WebLogic clusters to routing user requests, the Front Host of the WebLogic cluster needs to be updated to the DNS name of Traffic Manager.
+
+1. Make sure you have signed in to WebLogic Server Administratiion Console for the active cluster.
+1. Locate to "Domain structure > wlsd > Environment > Clusters" in the left navigation area. Click "Clusters".
+1. You should see "cluster1" listed in the right work area. Click "cluster1".
+1. Click HTTP > Lock & Edit > Find out the copied "DNS name", remove the starting "http://" and set the remaining for "Frontend Host" > Save > Activate Changes.
+
+### Configure JDBC TLOG
+
+Next, you're going to configure JDBC TLOG for all managed servers of the two clusters.
+
+1. Make sure you have signed in to WebLogic Server Administratiion Console for the active cluster.
+1. Locate to "Domain structure > wlsd > Environment > Servers" in the left navigation area. Click "Servers".
+1. You should see server `msp1` and `msp2` listed in the right work area. 
+1. Click `msp1` > Services > Lock & Edit > Under "Transaction Log Store", set Type as JDBC, Data Source as `jdbc/WebLogicCafeDB` > Verify default of Prefix Name is `TLOG_msp1_`, change accordingly if not > Save > Activate Changes.
+1. Click Servers > `msp2`, and execute the same steps above except that verifing and being sure the Prefix Name of Transaction Log Store is `TLOG_msp2_`.
+
+### Restart managed servers for the active cluster
+
+For the active cluster, restarting all managed servers for all changes above to take effect.
+
+1. Make sure you have signed in to WebLogic Server Administratiion Console for the active cluster.
+1. Locate to "Domain structure > wlsd > Environment > Servers" in the left navigation area. Click "Servers".
+1. Click Control > Select both `msp1` and `msp2` > Click "Shutdown" with option "When work completes" > Yes > Click Refresh icon. Wait until "Status of Last Action" is "TASK COMPLETED" > Select both `msp1` and `msp2` > Click Start > Yes > Click Refresh icon. Wait until "Status of Last Action" is "TASK COMPLETED". You should see "State" for both `msp1` and `msp2` is "RUNNING".
+1. Find out the copied value for "DNS name" of Azure Traffic Manager, open a new tab of the browser, paste the copied value into the address bar, append `/weblogic-cafe`, and hit `Enter` key. You will see the UI of the sample application:
+
+   ![UI of the sample application deployed in the East US region](./media/sample_app_ui_eastus.png)
+
+   If you don't see this, you must troubleshoot and resolve the reason why before continuing. 
+
+## Setting up Recovery Services vault
+
+You will be using the Azure Site Recovery to replicates workloads running on virtual machines (VMs) from the primary cluster deployed on East US region to the passive cluster deployed on West US region.
+
+1. Go to the [Azure portal](http://portal.azure.com).
+1. Select 'Create a resource' > Select 'See more in All services'. In the filter box, enter and select 'Recovery Services vaults'. Hit 'Create'.
+1. Select `<your prefix>`-demo-wls-cluster-westus for "Resource group".
+1. Specify `<your prefix>`-demo-recovery-svc-vault-westus for "Name".
+1. Click 'Review + Create'.
+1. Click 'Create'. Wait until the deployment completes.
+
+## Replicate VMs in the active cluster
+
+Now it's ready to protect VMs in the active cluster by creating the replication in the backup region.
+
+1. In the portal, go to 'All resources'. Enter `<your prefix>`-demo-wls-cluster-eastus into the filter box and press Enter.
+1. Set filter "Type == Virtual machine" > Apply > You should see 3 VMs (adminVM, mspVM1 and mspVM2) listed.
+1. For each of VMs ordering by adminVM, mspVM1 and mspVM2, execute the following steps for disaster recovery.
+   1. Click to open VM resource.
+   1. Open "Disaster recovery" page under Operations.
+   1. In "Basics" page, select "West US" for Target region. Click Next.
+   1. In "Advanced settings" page:
+      1. Select the subscription of Source for Target subscription.
+      1. Select `<your prefix>`-demo-wls-cluster-westus for target VM resource group.
+      1. Select wlsd_VNET for target Virtual network.
+      1. Select WLSCluster-AvailabilitySet for target Availibility.
+      1. Click Next.
+      1. Click Start replication.
+      1. Wait until the replication completes.
+
+## Create runbooks for post actions after failing over VMs
+
+Once the primary cluster is down, the VMs in the passive cluster will be created using the replicated disk snapshots of VMs in the active cluster. Once VM failing over completes, some post actions need to be executed to ensure the passive cluster work as expected in the backup region. These post actions are implemented using Azure Automation Account runbooks.
+
+1. Go to the [Azure portal](http://portal.azure.com).
+1. Select 'Create a resource' > Select 'See more in All services'. In the filter box, enter and select 'Automation Accounts'. Hit 'Create'.
+1. Select `<your prefix>`-demo-wls-cluster-westus for "Resource group".
+1. Specify `<your prefix>`-demo-automation-account for "Automation account name".
+1. Specify **West US** for "Region".
+1. Click "Review + Create". Click "Create". Wait until the deployment completes. Click "Go to resource".
+1. Under "Account Settings", open "Identity" page.
+   1. Click "Azure role assignments".
+   1. Click "Add role assignment".
+   1. Select "Subscription" for "Scope".
+   1. Select same subscrition used for creating other Azure resources in this guide.
+   1. Select "Contributor" for "Role".
+   1. Click "Save". Wait until save completes. Close the page and return back to "Automation Account" page.
+1. Under "Process Automation", open "Runbooks" page.
+   1. Click "Create a runbook".
+   1. Specify "post-start-secondary-admin-server" for "Name".
+   1. Select "PowerShell" for "Runbook type".
+   1. Select "7.1 (Preview)" for "Runtime version".
+   1. Click "Create". Wait until it completes. You will be re-directed to edit window of the new created runbook.
+   1. Open file `<your local clone of the repo>/wls-dr-asr/runbooks/post-start-secondary-admin-server.ps1` in your local editor, copy and paste its content to the runbook edit window.
+   1. Replace all placeholders `<your prefix>` with the value you specified before. Replace placeholder `<secondary-admin-console-uir>` with the value of `adminConsole` for the passive cluster deployment you logged down before.
+   1. Click "Save". Click "Publish". Click "Yes" to confirm the publish. Close the runbook.
+   1. Click "Create a runbook".
+   1. Specify "post-start-secondary-managed-servers" for "Name".
+   1. Select "PowerShell" for "Runbook type".
+   1. Select "7.1 (Preview)" for "Runtime version".
+   1. Click "Create". Wait until it completes. You will be re-directed to edit window of the new created runbook.
+   1. Open file `<your local clone of the repo>/wls-dr-asr/runbooks/post-start-secondary-managed-servers.ps1` in your local editor, copy and paste its content to the runbook edit window.
+   1. Replace all placeholders `<your prefix>` with the value you specified before.
+   1. Click "Save". Click "Publish".
+
+## Create disaster recovery plans
+
+Once the VMs in the active cluster are protected and post actions runbooks are defined, create recovery plans using the recovery services vault we created before.
+
+1. In the portal, go to 'All resources'. Enter `<your prefix>`-demo-recovery-svc-vault-westus into the filter box and press Enter.
+1. You should see one Recovery Services vault named `<your prefix>`-demo-recovery-svc-vault-westus. Click it to open.
+1. Under "Protected items", open "Replicated items" page. You should see 3 items named adminVM, mspVM1 and mspVM2 listed. Check and wait until the status for 3 items are **Protected**.
+1. Under "Manage", open "Recovery Plans (Site Recovery)" page.
+   1. Click "+ Recovery plan".
+   1. Specify `start-secondary-admin-server` for Name.
+   1. Select `East US` for Source.
+   1. Select `West US` for Target.
+   1. Select `Resource Manager` for "Allow items with deployment model".
+   1. Click "Select items". Select `adminVM`. Click OK.
+   1. Click Create. Wait until it completes. Click to open. Click Customize.
+      1. Click "..." of "Group 1: Start" to open the context menu. Click "Add post action".
+      1. Specify `post-start-secondary-admin-server` for Name.
+      1. Select `<your prefix>`-demo-automation-account for Automation accout name.
+      1. Select `post-start-secondary-admin-server` for Runbook name.
+      1. Click OK. Click close button. Click OK to dismiss the warning dialog. Click Save. Wait until it completes. Close the recovery plan.
+   1. Click "+ Recovery plan".
+   1. Specify `start-secondary-managed-servers` for Name.
+   1. Select `East US` for Source.
+   1. Select `West US` for Target.
+   1. Select `Resource Manager` for "Allow items with deployment model".
+   1. Click "Select items". Select `mspVM1` and `mspVM2`. Click OK.
+   1. Click Create. Wait until it completes. Click to open. Click Customize.
+      1. Click "..." of "Group 1: Start" to open the context menu. Click "Add post action".
+      1. Specify `post-start-secondary-managed-servers` for Name.
+      1. Select `<your prefix>`-demo-automation-account for Automation accout name.
+      1. Select `post-start-secondary-managed-servers` for Runbook name.
+      1. Click OK. Click close button. Click OK to dismiss the warning dialog. Click Save. Wait until it completes. Close the recovery plan.
+
+## Create alert rule for notifying outage
+
+The final step is to create an alert rule in the Azure Traffic Manager, which will send notification email when the outage of the active cluster is detected, so user can trigger recovery plans.
+
+1. In the portal, go to 'All resources'. Enter `<your prefix>`-demo-traffic-manager into the filter box and press Enter.
+1. You should see one Azure Manager profile named `<your prefix>`-demo. Click it to open.
+1. Under "Monitoring", open "Alerts" page.
+   1. Click "Create an alert rule".
+   1. Select "Endpoint Status by Endpoint" from signals listed.
+   1. Under "Split "by dimensions", select "Endpoint name" for "Dimension name", "=" for "Operator", and "gw-eastus" for "Dimension values".
+   1. Under "Alert logic", select "Less than" for "Operator", "Minimum" for "Aggregation type", and set `0.5` for "Threshold value".
+   1. Click Done.
+   1. Click Next.
+1. In Actions page, click "Create action group".
+   1. Set "notify-primary-cluster-outage" for "Action group name".
+   1. Set "notify-down" for "Display name".
+   1. Click Next.
+   1. In Notifications page:
+      1. Select "Email/SMS message/Push/Voice" for "Notification type".
+      1. Check "Email". Set email address for "Email".
+      1. Click OK.
+      1. Set appropriate value (e.g., "primary-cluster-outage") for "Name" of the notification.
+      1. Click Next.
+    1. Click Review + create.
+    1. Create Create. Wait until it completes.
+1. Click Next.
+1. In Details page:
+   1. Select "2 - Warning" for "Severity".
+   1. Set "primary-cluster-outage" for "Name".
+   1. Click "Review + create".
+   1. Click Create. Wait until it completes.
+
+## Demonstrating the disaster recovery of the solution
+
+You have set up all of components of the solutoin, and deployed a sample application for the demonstration of disaster recovery, congratulations! 
+
+The next step is to show you how to demo the solution works.
+
+### The active WebLogic cluster serves user requests
+
+Normally, all user requests should be routed to the active WebLogic cluster deployed in East US region by Azure Traffic Manager:
+
+1. Return to the UI of the sample application you just opened. The URL looks like `http://<your prefix>-demo.trafficmanager.net/weblogic-cafe`.
+1. Observe that **East US** is disaplyed at the left-top of the page.
+1. Create a new coffee with a name and the price, which will be persisted into both data table and session table of the database.
+1. Observe that the new coffee is added to the list of coffees.
+
+### Simulate outage of the active cluster 
+
+You can simulate the outage of the active cluster by stopping the Azure Application Gateway deployed in the East US region:
+
+```
+az network application-gateway stop -n myAppGateway -g <your prefix>-demo-wls-cluster-eastus
+```
+
+Normally, after about 5 minutes, you should receive an email with title "Azure: Activated Severity: 2 primary-cluster-outage" in the email box you specified during the creation of alert rule.
+
+However, if you don't receive such email, try to wait longer, e.g. 10 minutes; if the email is still not received, you can start the Azure Application Gateway to deactivate the alert:
+
+```
+az network application-gateway start -n myAppGateway -g <your prefix>-demo-wls-cluster-eastus
+```
+
+Again, wait until you receive an email with title "Azure: Deactivated Severity: 2 primary-cluster-outage". Then stop the Azure Application Gateway deployed in the East US region again:
+
+```
+az network application-gateway stop -n myAppGateway -g <your prefix>-demo-wls-cluster-eastus
+```
+
+Now you should be able to receive an email with title "Azure: Activated Severity: 2 primary-cluster-outage" after few minutes. If the workaround still doesn't work, leave a message to the repo owner so the owner can troubleshooting. 
+
+Optionally, you can also find fired alerts of the Azure Traffic Manager from Azure Portal:
+
+1. In the portal, go to 'All resources'. Enter `<your prefix>`-demo-traffic-manager into the filter box and press Enter.
+1. You should see one Azure Manager profile named `<your prefix>`-demo. Click it to open.
+1. Under "Monitoring", open "Alerts" page. You should see the fired alert listed.
+
+### Execute disaster recovery plans
+
+Once you receive the alert activated email, execute the 1st recovery plan to fail over the admin server.
+
+1. In the portal, go to 'All resources'. Enter `<your prefix>`-demo-recovery-svc-vault-westus into the filter box and press Enter.
+1. You should see one Recovery Services vault named `<your prefix>`-demo-recovery-svc-vault-westus. Click it to open.
+1. Under "Manage", open "Recovery Plans (Site Recovery)" page.
+   1. Open recovery plan **start-secondary-admin-server**.
+   1. Click Failover.
+   1. Check **I understand the risk. Skip test failover.**
+   1. Uncheck **Shut down machines before beginning failover**.
+   1. Click OK.
+   1. Open Notifications panel where user initialed tasks / operations are listed.
+   1. Find the 1st one **Failover of 'start-secondary-admin-server' is in progress...** and click to open.
+   1. Monitor the job progress, wait until it completes.
+
+Next, update the data source configured in the passive cluster.
+
+1. Sign in to WebLogic Server Administratiion Console using the the copied value of "adminConsole" and credentials of "WebLogic Administrator" in section [Deploy the passive WebLogic cluster](#deploy-the-passive-weblogic-cluster)
+1. Locate to "Domain structure > wlsd > Services > Data Sources" in the left navigation area. Click "Data Sources".
+1. You should see data source `jdbc/WebLogicCafeDB` listed in the right work area. Click to open.
+1. Open tab **Connection Pool** > Click Lock & Edit.
+   1. For value of **URL**, find out `westus` and replace it with `eastus`.
+   1. For value of **Properties**, find out `westus` and replace it with `eastus`.
+   1. Click Save.
+   1. Click Activate Changes.
+
+Then, execute the 2nd recovery plan to fail over managed servers.
+
+1. In the portal, go to 'All resources'. Enter `<your prefix>`-demo-recovery-svc-vault-westus into the filter box and press Enter.
+1. You should see one Recovery Services vault named `<your prefix>`-demo-recovery-svc-vault-westus. Click it to open.
+1. Under "Manage", open "Recovery Plans (Site Recovery)" page.
+   1. Open recovery plan **start-secondary-managed-servers**.
+   1. Click Failover.
+   1. Check **I understand the risk. Skip test failover.**
+   1. Uncheck **Shut down machines before beginning failover**.
+   1. Click OK.
+   1. Open Notifications panel where user initialed tasks / operations are listed.
+   1. Find the 1st one **Failover of 'start-secondary-managed-servers' is in progress...** and click to open.
+   1. Monitor the job progress, wait until it completes.
+
+Optionally, you can also verify the runbooks are triggered and find their jobs from Azure Portal:
+
+1. In the portal, go to 'All resources'. Enter `post-start-secondary-admin-server` into the filter box and press Enter.
+1. You should see one runbook with name prefix `post-start-secondary-admin-server` listed. Click it to open.
+1. Under "Resources", open "Jobs" page. You should see its jobs listed. You can also click to open and view job's Input, Output, Errors, etc.
+1. Follow the similar steps to view jobs executed by runbook `post-start-secondary-managed-servers`.
+
+### Monitor the passive cluster is activated
+
+Now, switch to the "Overview" page of the Azure Traffic manager to monitor endpoints' status.
+
+1. In the portal, go to 'All resources'. Enter `<your prefix>`-demo-traffic-manager into the filter box and press Enter.
+1. You should see one Azure Manager profile named `<your prefix>`-demo. Click it to open. You should see two endpoints `gw-eastus` and `gw-westus`. Click refresh to update the Monitor status.
+1. For endpoint `gw-eastus`, it should be in `Degraded` status.
+1. For endpoint `gw-westus`, it should be changed from `Degraded` to `Online`.
+1. Refresh the UI of sample app.
+1. Observe all of coffees are listed due to the auto replication from primary replica to the secondary replica.
+1. Observe the values of the name and the price for the new created coffee are retained due to the session persistence. For example:
+
+   ![UI of the sample application deployed in the West US region](./media/sample_app_ui_westus.png)
+
+This demonstrates that the passive cluster is activated and handling user requests in a failover event when the active cluster is down.
+
+Next, create another coffee to demonstrate the read-only PostgreSQL repica has been promoted to a read-write standalone server. 
+
+1. Create a new coffee by specifying a different name and price in the coffee creation form, click Create.
+1. Observe that the new coffee is successfully created and appened to the coffee list.
+
+### Commit fail over
+
+Once you're satisfied the fail over result, you can commit the fail over for the recovery plans you just executed.
+
+1. In the portal, go to 'All resources'. Enter `<your prefix>`-demo-recovery-svc-vault-westus into the filter box and press Enter.
+1. You should see one Recovery Services vault named `<your prefix>`-demo-recovery-svc-vault-westus. Click it to open.
+1. Under "Manage", open "Recovery Plans (Site Recovery)" page.
+   1. Open recovery plan **start-secondary-admin-server**.
+   1. Click Commit. Click OK. Close the recovery plan.
+   1. Open recovery plan **start-secondary-managed-servers**.
+   1. Click Commit. Click OK. Close the recovery plan.
+   1. Wait until the operations complete for these two recovery plans.
+
+Congrats! You have done the demonstration of the disaster recovery solution you just set up! 
+
+## Recovery Time Objective (RTO) and Recovery Point Objective (RPO)
+
+Based on the observation during the demo, the rough RTO is about 20 mins consisting of:
+* About 4 mins for firing alert by Azure Traffic manager. Pls notice that the time varies among tests. User may also use other tool to monitor the endpoint health and trigger DR event. So this data is only for demo purpose.
+* About 10 mins for executing recovery plan **start-secondary-admin-server**, which includes failing over admin server, starting admin server and executing the post action. The time used for post action is about 7 minutes 38 seconds, which includes assigning pubic ip address to the admin server, promoting PostgreSQL replica to a standalone server and waiting for admin console available. Pls notice that the time may vary among tests, but this data is still valid as a benchmark reference.
+  * In case the PostgreSQL replica promotion is not needed in the post action if user selects other database, the time can be reduced to about 5 mins.
+* About 1 min for manually updating the data source configured in the passive cluster.
+* About 5 mins for executing recovery plan **start-secondary-managed-servers**, which includes failing over managed servers, starting managed servers and executing the post action. The time used for post action is about 2 minutes 33 seconds, which includes waiting for managed servers up and running. Pls notice that the time may vary among tests, but this data is still valid as a benchmark reference.
+
+There is no exact number for RPO compared to the RTO in this guide. Since we reply on Azure Site Recovery and Azure Database for PostgreSQL and Azure NetApp Files for asynchronouslly replicating data across regions, here is some useful information:
+
+* Azure Site Recovery: [What's a crash-consistent recovery point?](https://docs.microsoft.com/azure/site-recovery/azure-to-azure-common-questions#whats-a-crash-consistent-recovery-point)
+  > A crash-consistent recovery point contains on-disk data, as if you pulled the power cord from the server during the snapshot. It doesn't include anything that was in memory when the snapshot was taken.
+  > Today, most apps can recover well from crash-consistent snapshots. A crash-consistent recovery point is usually enough for non-database operating systems, and apps such as file servers, DHCP servers, and print servers.
+  > Site Recovery automatically creates a crash-consistent recovery point **every five minutes**.
+
+* Azure Database for PostgreSQL: [Failover to replica](https://docs.microsoft.com/azure/postgresql/concepts-read-replicas#failover-to-replica)
+  > Since replication is asynchronous, there could be a considerable lag between the primary and the replica. The amount of lag is influenced by a number of factors such as the type of workload running on the primary server and the latency between the primary and the replica server. In typical cases with nominal write workload, replica lag is expected between a few seconds to few minutes. However, in cases where the primary runs very heavy write-intensive workload and the replica is not catching up fast enough, the lag can be much higher. 
+
+## Cleaning Up
+
+Once you are done exploring all aspects of the demo, you should delete all the resources deployed on Azure. This is especially important if you are not using a free subscription! If you do keep these resources around (for example to begin your own prototype), you should at least use your own and secured passwords and make the corresponding changes in the demo code if needed.
+
+To delete resources, go to resource groups, type "`<your prefix>`-demo" and you should find 4 resource groups listed:
+
+* `<your prefix>`-demo-traffic-manager
+* `<your prefix>`-demo-wls-cluster-eastus
+* `<your prefix>`-demo-wls-cluster-westus
+* `<your prefix>`-demo-postgres
+
+Click each of the resource groups and hit Delete resource group. 
