@@ -452,3 +452,10 @@ To delete resources, go to resource groups, type "`<your prefix>`-demo" and you 
 * `<your prefix>`-demo-postgres
 
 Click each of the resource groups and hit Delete resource group. 
+
+## Next
+
+You can find other disaster recovery solutions for WebLogic cluster on Azure VMs in this repo.
+
+1. [Deploying an ASR based disaster recovery solution of WebLogic on Azure VMs](../wls-dr-asr/README.md)
+1. [Deploying a filesystem based disaster recovery solution of WebLogic on Azure VMs](../wls-dr-filesystem/README.md)
