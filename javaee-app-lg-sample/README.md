@@ -15,9 +15,10 @@ References:
 * [What is Application Gateway Ingress Controller?](https://docs.microsoft.com/azure/application-gateway/ingress-controller-overview)
 * [Tutorial: Enable the Ingress Controller add-on for a new AKS cluster with a new Application Gateway instance](https://docs.microsoft.com/azure/application-gateway/tutorial-ingress-controller-add-on-new)
 * [Install an Application Gateway Ingress Controller (AGIC) using an existing Application Gateway](https://docs.microsoft.com/azure/application-gateway/ingress-controller-install-existing)
-## Install Open Liberty Operator v0.8.0 using kubectl
 
-Depending on the operator is only watching own namespace, watching another namespace or all namespaces, there're 3 guidances describing how to install Open Liberty Operator v0.8.0 using kubectl, including the AKS setup with additonal user node pool, Operator installation, sample app deployment and verification:
+## Install Open Liberty Operator v0.8.2 using kubectl
+
+Depending on the operator is only watching own namespace, watching another namespace or all namespaces, there're 3 guidances describing how to install Open Liberty Operator v0.8.2 using kubectl, including the AKS setup with additonal user node pool, Operator installation, sample app deployment and verification:
 
 1. [Watch own namespace](./watch-own-namespace.md)
 1. [Watch another namespace](./watch-another-namespace.md)
@@ -25,5 +26,5 @@ Depending on the operator is only watching own namespace, watching another names
 
 Referneces:
 
-* [Open Liberty Operator v0.8.0](https://github.com/OpenLiberty/open-liberty-operator/tree/main/deploy/releases/0.8.0)
-* [Install using kubectl](https://github.com/OpenLiberty/open-liberty-operator/tree/main/deploy/releases/0.8.0/kubectl)
+* [Open Liberty Operator v0.8.2](https://github.com/OpenLiberty/open-liberty-operator/tree/main/deploy/releases/0.8.2)
+* [Install using kubectl](https://github.com/OpenLiberty/open-liberty-operator/tree/main/deploy/releases/0.8.2/kubectl)

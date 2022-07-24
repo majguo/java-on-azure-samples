@@ -1,6 +1,6 @@
 # Watch Own Namespace
 
-The guidance decribes the steps on how to install Open Liberty Operator v0.8.0 using kubectl and make it watch **own namespace** on events including if there're any resources with type as Open Liberty Operatro supported CRDs created, updated or deleted. Besides, it also includes the instructions on how to create a user node pool, where you can install the Open Liberty Operator and sample application using `nodeAffinity`, as well as how to evenly distribute pods to nodes in different zones for high availability using `podAntiAffinity`.
+The guidance decribes the steps on how to install Open Liberty Operator v0.8.2 using kubectl and make it watch **own namespace** on events including if there're any resources with type as Open Liberty Operatro supported CRDs created, updated or deleted. Besides, it also includes the instructions on how to create a user node pool, where you can install the Open Liberty Operator and sample application using `nodeAffinity`, as well as how to evenly distribute pods to nodes in different zones for high availability using `podAntiAffinity`.
 
 ## Create an AKS cluster 1.22.6 and add a user node pool with 3 nodes
 
@@ -32,7 +32,7 @@ az aks nodepool add \
 az aks get-credentials --resource-group $RESOURCE_GROUP_NAME --name $CLUSTER_NAME --overwrite-existing
 ```
 
-## Install Open Liberty Operator v0.8.0 using kubectl on the user node pool
+## Install Open Liberty Operator v0.8.2 using kubectl on the user node pool
 
 You're going to install the Operator in `app-namespace` namespace on the user node pool, and make it watch the same namespace `app-namespace`. Follow steps below to complete the installation:
 
@@ -42,7 +42,7 @@ APP_NAMESPACE=app-namespace
 kubectl create namespace $APP_NAMESPACE
 
 # Install Custom Resource Definitions (CRDs) for OpenLibertyApplication
-kubectl apply -f https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/0.8.0/kubectl/openliberty-app-crd.yaml
+kubectl apply -f https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/0.8.2/kubectl/openliberty-app-crd.yaml
 
 # We don't need to install extra roles for watching own namespace
 OPERATOR_NAMESPACE=${APP_NAMESPACE}
@@ -50,7 +50,7 @@ WATCH_NAMESPACE=${APP_NAMESPACE}
 
 # Install the operator on the user node pool
 rm -rf openliberty-app-operator.yaml
-wget https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/0.8.0/kubectl/openliberty-app-operator.yaml -O openliberty-app-operator.yaml
+wget https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/0.8.2/kubectl/openliberty-app-operator.yaml -O openliberty-app-operator.yaml
 cat <<EOF >>openliberty-app-operator.yaml
       affinity:
         nodeAffinity:
@@ -80,7 +80,7 @@ cat <<EOF | kubectl apply -f -
 apiVersion: apps.openliberty.io/v1beta2
 kind: OpenLibertyApplication
 metadata:
-  name: lg-sample
+  name: app-sample-own
   namespace: ${APP_NAMESPACE}
   labels:
     app: demo
