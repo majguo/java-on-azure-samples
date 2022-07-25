@@ -383,7 +383,7 @@ javaee-app-sample-ingress   <none>   *       20.62.178.13   80      5m49s
 
 Once the *ADDRESS* represents to an actual public IP address, use `CTRL-C` to stop the `kubectl` watch process.
 
-Open a web browser to the external IP address of your Ingress (`20.62.178.13` for the above example) to see the application home page. You should see the pod name of your application replicas displayed at the top-left of the page. The another way to visit the application is to copy the value of environment `APPGW_URL` defined at the previous section, and paste it to the browser.
+Open a web browser to the external IP address of your Ingress (`20.62.178.13` for the above example) to see the application home page. You should see the pod name of your application replicas displayed at the top-left of the page.
 
 ## Clean up the resources
 
