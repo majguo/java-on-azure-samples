@@ -16,3 +16,19 @@ The samples below describe different scenarios to connect to Azure SQL database.
 
 1. [Connect to Azure SQL with authentication "ActiveDirectoryPassword"](./sql-auth-aad-password/README.md)
 1. [Integrate Open Liberty with AzureSQL using Active Directory Password](./javaee-cafe-mssql-auth-aad-password/README.md)
+
+## Install Open Liberty Operator v0.8.2 using kubectl
+
+This [module](./olo-installation/README.md) provies guides on installing Open Liberty Operator 0.8.2 in different modes, including:
+
+1. [Watch own namespace](./olo-installation/watch-own-namespace.md)
+1. [Watch another namespace](./olo-installation/watch-another-namespace.md)
+1. [Watch all namespaces](./olo-installation/watch-all-namespaces.md)
+
+## Enable Application Gateway Ingress Controller (AGIC)
+
+This [module](./agic-aks/README.md) provides guides on enabling AGIC for the AKST cluster with different approaches, including:
+
+1. [Enable AGIC with AKS Add-On](./agic-aks/agic-addon.md)
+1. [Enable AGIC with Helm using service principal credentials](./agic-aks/agic-helm-sp.md)
+1. [Enable AGIC with Helm using AAD Pod Identity](./agic-aks/agic-helm-identity.md)
