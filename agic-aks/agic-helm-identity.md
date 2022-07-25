@@ -1,4 +1,4 @@
-# Deploy a Java application with Open Liberty or WebSphere Liberty on an Azure Kubernetes Service (AKS) cluster
+# Enable Application Gateway Ingress Controller with Helm using AAD Pod Identity
 
 This article demonstrates how to:
 
