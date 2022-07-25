@@ -71,14 +71,32 @@ You should see `Login Succeeded` at the end of command output if you have logged
 You will need to create an AAG which will be used as the load balancer for your application running on the AKS later. Run the following commands to deploy an AAG:
 
 ```azurecli-interactive
-wget https://raw.githubusercontent.com/oracle/weblogic-azure/main/weblogic-azure-aks/src/main/bicep/modules/_azure-resoruces/_appgateway.bicep -q -O appgateway.bicep
+# Create resource groups
+VNET_RG_NAME=<vnet-rg-name>
+AG_RG_NAME=<ag-rg-name>
+az group create --name ${VNET_RG_NAME} --location eastus
+az group create --name ${AG_RG_NAME} --location eastus
 
-# If The following command exited with error "Failed to parse 'appgateway.bicep', please check whether it is a valid JSON format", pls run `az upgrade` to upgrade Azure CLI
-# TODO: WARNING: A new Bicep release is available: v0.4.1318. Upgrade now by running "az bicep upgrade".
-result=$(az deployment group create -n testDeployment -g $RESOURCE_GROUP_NAME --template-file appgateway.bicep --parameters location=eastus)
-APPGW_NAME=$(echo $result | jq -r '.properties.outputs.appGatewayName.value')
-APPGW_VNET_NAME=$(echo $result | jq -r '.properties.outputs.vnetName.value')
-APPGW_URL=$(echo $result | jq -r '.properties.outputs.appGatewayURL.value')
+# Create vNet and subnets
+VNET_NAME=myVnet
+AG_SUBNET_NAME=agSubnet
+az network vnet create -n ${VNET_NAME} -g ${VNET_RG_NAME} --address-prefix 172.16.0.0/24
+az network vnet subnet create -n ${AG_SUBNET_NAME} --address-prefixes 172.16.0.0/24 --vnet-name ${VNET_NAME} -g ${VNET_RG_NAME}
+agSubnetId=$(az network vnet subnet show -n ${AG_SUBNET_NAME} --vnet-name ${VNET_NAME} -g ${VNET_RG_NAME} --query "id" --output tsv)
+
+# Create Application Gateway
+PUBLIC_IP_NAME=myPublicIp
+az network public-ip create -n ${PUBLIC_IP_NAME} -g ${AG_RG_NAME} --allocation-method Static --sku Standard
+APPGW_NAME=myApplicationGateway
+az network application-gateway create \
+    --name ${APPGW_NAME} \
+    --resource-group ${AG_RG_NAME} \
+    --location eastus \
+    --sku Standard_v2 \
+    --public-ip-address ${PUBLIC_IP_NAME} \
+    --subnet ${agSubnetId} \
+    --frontend-port 80 \
+    --priority 1000
 ```
 
 ## Create an AKS cluster
@@ -126,15 +144,14 @@ aksMCRGName=$(az aks show -n $CLUSTER_NAME -g $RESOURCE_GROUP_NAME -o tsv --quer
 # Randomly found that vNet resource can't be retrieved from the AKS node resource group with the following command initially. After a few minutes, it's retrived finally.
 aksNetWorkId=$(az resource list -g ${aksMCRGName} --resource-type Microsoft.Network/virtualNetworks -o tsv --query '[*].id')
 aksNetworkName=$(az resource list -g ${aksMCRGName} --resource-type Microsoft.Network/virtualNetworks -o tsv --query '[*].name')
-az network vnet peering create --name aks-appgw-peer --remote-vnet ${aksNetWorkId} --resource-group ${RESOURCE_GROUP_NAME} --vnet-name ${APPGW_VNET_NAME} --allow-vnet-access
+az network vnet peering create --name aks-appgw-peer --remote-vnet ${aksNetWorkId} --resource-group ${VNET_RG_NAME} --vnet-name ${VNET_NAME} --allow-vnet-access
 
-appgwNetworkId=$(az resource list -g ${RESOURCE_GROUP_NAME} --name ${APPGW_VNET_NAME} -o tsv --query '[*].id')
+appgwNetworkId=$(az resource list -g ${VNET_RG_NAME} --name ${VNET_NAME} -o tsv --query '[*].id')
 az network vnet peering create --name aks-appgw-peer --remote-vnet ${appgwNetworkId} --resource-group ${aksMCRGName} --vnet-name ${aksNetworkName} --allow-vnet-access
 
 # Associate the route table to Application Gateway's subnet
 routeTableId=$(az network route-table list -g $aksMCRGName --query "[].id | [0]" -o tsv)
-appGatewaySubnetId=$(az network application-gateway show -n $APPGW_NAME -g $RESOURCE_GROUP_NAME -o tsv --query "gatewayIpConfigurations[0].subnet.id")
-az network vnet subnet update --ids $appGatewaySubnetId --route-table $routeTableId
+az network vnet subnet update --ids $agSubnetId --route-table $routeTableId
 ```
 
 ### Connect to the AKS cluster
@@ -174,15 +191,16 @@ OPERATOR_NAMESPACE=default
 WATCH_NAMESPACE='""'
 
 # Install Custom Resource Definitions (CRDs) for OpenLibertyApplication
-kubectl apply -f https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/master/deploy/releases/0.7.1/openliberty-app-crd.yaml
+kubectl apply -f https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/0.8.2/kubectl/openliberty-app-crd.yaml
 
-# Install cluster-level role-based access
-curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/master/deploy/releases/0.7.1/openliberty-app-cluster-rbac.yaml \
+# Install cluster-level role-based access to watch all namespaces
+curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/0.8.2/kubectl/openliberty-app-rbac-watch-all.yaml \
     | sed -e "s/OPEN_LIBERTY_OPERATOR_NAMESPACE/${OPERATOR_NAMESPACE}/" \
     | kubectl apply -f -
 
 # Install the operator on the user node pool
-wget https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/master/deploy/releases/0.7.1/openliberty-app-operator.yaml -q -O openliberty-app-operator.yaml
+rm -rf openliberty-app-operator.yaml
+wget https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/0.8.2/kubectl/openliberty-app-operator.yaml -O openliberty-app-operator.yaml
 cat <<EOF >>openliberty-app-operator.yaml
       affinity:
         nodeAffinity:
@@ -198,6 +216,8 @@ EOF
 cat openliberty-app-operator.yaml \
     | sed -e "s/OPEN_LIBERTY_WATCH_NAMESPACE/${WATCH_NAMESPACE}/" \
     | kubectl apply -n ${OPERATOR_NAMESPACE} -f -
+
+rm -rf openliberty-app-operator.yaml
 ```
 
 ## Install AAG Ingress Controller
@@ -215,15 +235,48 @@ sudo apt-get install helm
 helm repo add application-gateway-kubernetes-ingress https://appgwingress.blob.core.windows.net/ingress-azure-helm-package/
 helm repo update
 
-kubectl apply -f https://raw.githubusercontent.com/oracle/weblogic-azure/main/weblogic-azure-aks/src/main/arm/scripts/appgw-ingress-clusterAdmin-roleBinding.yaml
+# Grant azure ingress permission
+cat <<EOF | kubectl apply -f -
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ingress-azure-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: ingress-azure
+  namespace: default
+EOF
+
+# Install AGIC
+rm -f appgw-helm-config.yaml
+cat >> appgw-helm-config.yaml <<EOF
+# Based on https://raw.githubusercontent.com/Azure/application-gateway-kubernetes-ingress/master/docs/examples/sample-helm-config.yaml
+verbosityLevel: 3
+appgw:
+    subscriptionId: @SUB_ID@
+    resourceGroup: @APPGW_RG_NAME@
+    name: @APPGW_NAME@
+    usePrivateIP: false
+    shared: false
+kubernetes:
+    watchNamespace: @WATCH_NAMESPACE@
+armAuth:
+    type: servicePrincipal
+    secretJSON: @SP_ENCODING_CREDENTIALS@
+rbac:
+    create: true
+EOF
 
 subID=$(az account show --query 'id' -o tsv)
 spBase64String=$(az ad sp create-for-rbac --role Contributor --scopes /subscriptions/${subID} --sdk-auth | base64 -w0)
 azureAppgwIngressVersion="1.5.1"
 
-wget https://raw.githubusercontent.com/oracle/weblogic-azure/main/weblogic-azure-aks/src/main/arm/scripts/appgw-helm-config.yaml.template -q -O appgw-helm-config.yaml
 sed -i -e "s:@SUB_ID@:${subID}:g" appgw-helm-config.yaml
-sed -i -e "s:@APPGW_RG_NAME@:${RESOURCE_GROUP_NAME}:g" appgw-helm-config.yaml
+sed -i -e "s:@APPGW_RG_NAME@:${AG_RG_NAME}:g" appgw-helm-config.yaml
 sed -i -e "s:@APPGW_NAME@:${APPGW_NAME}:g" appgw-helm-config.yaml
 sed -i -e "s:@WATCH_NAMESPACE@:${WATCH_NAMESPACE}:g" appgw-helm-config.yaml
 sed -i -e "s:@SP_ENCODING_CREDENTIALS@:${spBase64String}:g" appgw-helm-config.yaml
@@ -232,15 +285,16 @@ helm install ingress-azure \
     -f appgw-helm-config.yaml \
     application-gateway-kubernetes-ingress/ingress-azure \
     --version ${azureAppgwIngressVersion}
+
+rm -f appgw-helm-config.yaml
 ```
 
 ## Build application image
 
 To deploy and run your Liberty application on the AKS cluster, containerize your application as a Docker image using [Open Liberty container images](https://github.com/OpenLiberty/ci.docker) or [WebSphere Liberty container images](https://github.com/WASdev/ci.docker).
 
-1. Clone the sample code for this guide. The sample is on [GitHub](https://github.com/Azure-Samples/open-liberty-on-aks).
-1. Locate to your local clone and run `git checkout lg-engagement` to checkout branch `lg-engagement`.
-1. Run `cd javaee-app-lg-sample` to change directory to `javaee-app-lg-sample` of your local clone.
+1. Clone the sample code for this guide. The sample is on [GitHub](https://github.com/majguo/java-on-azure-samples).
+1. Locate to your local clone and run `cd agic-aks` to change to its sub directory `agic-aks`.
 1. Run `mvn clean package` to package the application.
 1. Run `mvn liberty:dev` to test the application. You should see `The defaultServer server is ready to run a smarter planet.` in the command output if successful. Use `CTRL-C` to stop the application.
 1. Retrieve values for properties `artifactId` and `version` defined in the `pom.xml`.
@@ -273,14 +327,14 @@ Follow steps below to deploy the Liberty application on the AKS cluster.
 1. Create a namespace for the sample.
 
    ```azurecli-interactive
-   APPLICATION_NAMESPACE=javaee-app-lg-sample-namespace
+   APPLICATION_NAMESPACE=javaee-app-sample-namespace
    kubectl create namespace ${APPLICATION_NAMESPACE}
    ```
 
 1. Create a pull secret so that the AKS cluster is authenticated to pull image from the ACR instance.
 
    ```azurecli-interactive
-   PULL_SECRET_NAME=javaee-app-lg-sample-pull-secret
+   PULL_SECRET_NAME=javaee-app-sample-pull-secret
    kubectl create secret docker-registry ${PULL_SECRET_NAME} \
       --docker-server=${LOGIN_SERVER} \
       --docker-username=${USER_NAME} \
@@ -288,12 +342,12 @@ Follow steps below to deploy the Liberty application on the AKS cluster.
       --namespace=${APPLICATION_NAMESPACE}
    ```
 
-1. Verify the current working directory is `javaee-app-lg-sample/target` of your local clone.
+1. Verify the current working directory is `agic-aks/target` of your local clone.
 1. Run the following commands to deploy your Liberty application with 3 replicas to the AKS cluster. Command output is also shown inline.
 
    ```azurecli-interactive
-   # Create OpenLibertyApplication "javaee-app-lg-sample"
-   APPLICATION_NAME=javaee-app-lg-sample
+   # Create OpenLibertyApplication "javaee-app-sample"
+   APPLICATION_NAME=javaee-app-sample
    REPLICAS=3
 
    cat openlibertyapplication.yaml \
@@ -306,19 +360,19 @@ Follow steps below to deploy the Liberty application on the AKS cluster.
        | sed -e "s/\${NODE_LABEL_VALUE}/${NODE_LABEL_VALUE}/g" \
        | kubectl apply -f -
 
-   openlibertyapplication.openliberty.io/javaee-app-lg-sample created
+   openlibertyapplication.apps.openliberty.io/javaee-app-sample created
 
    # Check if OpenLibertyApplication instance is created
    kubectl get openlibertyapplication ${APPLICATION_NAME} -n ${APPLICATION_NAMESPACE}
 
-   NAME                        IMAGE                                                   EXPOSED   RECONCILED   AGE
-   javaee-app-lg-sample        youruniqueacrname.azurecr.io/javaee-cafe:1.0.0          True         59s
+   NAME                   IMAGE                                                   EXPOSED   RECONCILED   AGE
+   javaee-app-sample      youruniqueacrname.azurecr.io/javaee-cafe:1.0.0          True         59s
 
    # Check if deployment created by Operator is ready
    kubectl get deployment ${APPLICATION_NAME} -n ${APPLICATION_NAMESPACE} --watch
 
-   NAME                        READY   UP-TO-DATE   AVAILABLE   AGE
-   javaee-app-lg-sample        0/3     3            0           20s
+   NAME                     READY   UP-TO-DATE   AVAILABLE   AGE
+   javaee-app-sample        0/3     3            0           20s
    ```
 
 1. Wait until you see `3/3` under the `READY` column and `3` under the `AVAILABLE` column, use `CTRL-C` to stop the `kubectl` watch process.
@@ -326,8 +380,8 @@ Follow steps below to deploy the Liberty application on the AKS cluster.
 1. Run the following commands to deploy Ingress resource for routing client requests to your deployed application. Command output is also shown inline.
 
    ```azurecli-interactive
-   # Create Ingress "javaee-app-lg-sample-ingress"
-   APPLICATION_INGRESS=javaee-app-lg-sample-ingress
+   # Create Ingress "javaee-app-sample-ingress"
+   APPLICATION_INGRESS=javaee-app-sample-ingress
 
    cat appgw-cluster-ingress.yaml \
        | sed -e "s/\${APPLICATION_INGRESS}/${APPLICATION_INGRESS}/g" \
@@ -335,13 +389,13 @@ Follow steps below to deploy the Liberty application on the AKS cluster.
        | sed -e "s/\${APPLICATION_NAME}/${APPLICATION_NAME}/g" \
        | kubectl apply -f -
 
-   ingress.networking.k8s.io/javaee-app-lg-sample-ingress created
+   ingress.networking.k8s.io/javaee-app-sample-ingress created
 
    # Check if Ingress instance is created
    kubectl get ingress ${APPLICATION_INGRESS} -n ${APPLICATION_NAMESPACE}
 
-   NAME                           CLASS    HOSTS   ADDRESS        PORTS   AGE
-   javaee-app-lg-sample-ingress   <none>   *       20.62.178.13   80      17s
+   NAME                        CLASS    HOSTS   ADDRESS        PORTS   AGE
+   javaee-app-sample-ingress   <none>   *       20.62.178.13   80      17s
    ```
 
 ### Test the application
@@ -351,13 +405,13 @@ To get public IP address of the Ingress, use the [kubectl get ingress](https://k
 ```azurecli-interactive
 kubectl get ingress ${APPLICATION_INGRESS} -n ${APPLICATION_NAMESPACE} --watch
 
-NAME                           CLASS    HOSTS   ADDRESS        PORTS   AGE
-javaee-app-lg-sample-ingress   <none>   *       20.62.178.13   80      5m49s
+NAME                        CLASS    HOSTS   ADDRESS        PORTS   AGE
+javaee-app-sample-ingress   <none>   *       20.62.178.13   80      5m49s
 ```
 
 Once the *ADDRESS* represents to an actual public IP address, use `CTRL-C` to stop the `kubectl` watch process.
 
-Open a web browser to the external IP address of your Ingress (`20.62.178.13` for the above example) to see the application home page. You should see the pod name of your application replicas displayed at the top-left of the page. The another way to visit the application is to copy the value of environment `APPGW_URL` defined at the previous section, and paste it to the browser.
+Open a web browser to the external IP address of your Ingress (`20.62.178.13` for the above example) to see the application home page. You should see the pod name of your application replicas displayed at the top-left of the page.
 
 ## Clean up the resources
 
@@ -365,6 +419,8 @@ To avoid Azure charges, you should clean up unnecessary resources.  When the clu
 
 ```azurecli-interactive
 az group delete --name $RESOURCE_GROUP_NAME --yes --no-wait
+az group delete --name ${AG_RG_NAME} --yes --no-wait
+az group delete --name ${VNET_RG_NAME} --yes --no-wait
 ```
 
 Delete the service principal used for AAG Ingress Controller:
