@@ -67,11 +67,11 @@ You should see `Login Succeeded` at the end of command output if you have logged
 
 ## Create an AKS cluster
 
-Use the [az aks create](/cli/azure/aks#az_aks_create) command to create an AKS cluster. The following example creates a cluster named *myAKSCluster* with one node. This will take several minutes to complete.
+Use the [az aks create](https://docs.microsoft.com/cli/azure/aks?view=azure-cli-latest#az-aks-enable-addons-examples) command to create an AKS cluster. The following example creates a cluster named *myAKSCluster* with one node, and enabled with AGIC addon. This will take several minutes to complete.
 
 ```azurecli-interactive
 CLUSTER_NAME=myAKSCluster
-az aks create --resource-group $RESOURCE_GROUP_NAME --name $CLUSTER_NAME --node-count 1 --generate-ssh-keys --enable-managed-identity --network-plugin azure --enable-addons ingress-appgw --appgw-name myApplicationGateway --appgw-subnet-cidr "10.2.0.0/16"
+az aks create --resource-group $RESOURCE_GROUP_NAME --name $CLUSTER_NAME --node-count 1 --generate-ssh-keys --enable-managed-identity --network-plugin azure --enable-addons ingress-appgw --appgw-name myApplicationGateway --appgw-subnet-cidr 10.225.0.0/16
 ```
 
 After a few minutes, the command completes and returns JSON-formatted information about the cluster, including the following:
@@ -131,22 +131,23 @@ aks-nodepool1-xxxxxxxx-yyyyyyyyyy   Ready    agent   76s     v1.20.9
 
 ## Install Open Liberty Operator
 
-After creating and connecting to the cluster, install the [Open Liberty Operator](https://github.com/OpenLiberty/open-liberty-operator/tree/master/deploy/releases/0.7.1) by running the following commands.
+After creating and connecting to the cluster, install the [Open Liberty Operator](https://github.com/OpenLiberty/open-liberty-operator/tree/master/deploy/releases/0.8.2) by running the following commands.
 
 ```azurecli-interactive
 OPERATOR_NAMESPACE=default
 WATCH_NAMESPACE='""'
 
 # Install Custom Resource Definitions (CRDs) for OpenLibertyApplication
-kubectl apply -f https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/master/deploy/releases/0.7.1/openliberty-app-crd.yaml
+kubectl apply -f https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/0.8.2/kubectl/openliberty-app-crd.yaml
 
-# Install cluster-level role-based access
-curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/master/deploy/releases/0.7.1/openliberty-app-cluster-rbac.yaml \
+# Install cluster-level role-based access to watch all namespaces
+curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/0.8.2/kubectl/openliberty-app-rbac-watch-all.yaml \
     | sed -e "s/OPEN_LIBERTY_OPERATOR_NAMESPACE/${OPERATOR_NAMESPACE}/" \
     | kubectl apply -f -
 
 # Install the operator on the user node pool
-wget https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/master/deploy/releases/0.7.1/openliberty-app-operator.yaml -O openliberty-app-operator.yaml
+rm -rf openliberty-app-operator.yaml
+wget https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main/deploy/releases/0.8.2/kubectl/openliberty-app-operator.yaml -O openliberty-app-operator.yaml
 cat <<EOF >>openliberty-app-operator.yaml
       affinity:
         nodeAffinity:
@@ -162,15 +163,16 @@ EOF
 cat openliberty-app-operator.yaml \
     | sed -e "s/OPEN_LIBERTY_WATCH_NAMESPACE/${WATCH_NAMESPACE}/" \
     | kubectl apply -n ${OPERATOR_NAMESPACE} -f -
+
+rm -rf openliberty-app-operator.yaml
 ```
 
 ## Build application image
 
 To deploy and run your Liberty application on the AKS cluster, containerize your application as a Docker image using [Open Liberty container images](https://github.com/OpenLiberty/ci.docker) or [WebSphere Liberty container images](https://github.com/WASdev/ci.docker).
 
-1. Clone the sample code for this guide. The sample is on [GitHub](https://github.com/Azure-Samples/open-liberty-on-aks).
-1. Locate to your local clone and run `git checkout lg-engagement` to checkout branch `lg-engagement`.
-1. Run `cd javaee-app-lg-sample` to change directory to `javaee-app-lg-sample` of your local clone.
+1. Clone the sample code for this guide. The sample is on [GitHub](https://github.com/majguo/java-on-azure-samples).
+1. Locate to your local clone and run `cd agic-aks` to change to its sub directory `agic-aks`.
 1. Run `mvn clean package` to package the application.
 1. Run `mvn liberty:dev` to test the application. You should see `The defaultServer server is ready to run a smarter planet.` in the command output if successful. Use `CTRL-C` to stop the application.
 1. Retrieve values for properties `artifactId` and `version` defined in the `pom.xml`.
@@ -203,14 +205,14 @@ Follow steps below to deploy the Liberty application on the AKS cluster.
 1. Create a namespace for the sample.
 
    ```azurecli-interactive
-   APPLICATION_NAMESPACE=javaee-app-lg-sample-namespace
+   APPLICATION_NAMESPACE=javaee-app-sample-namespace
    kubectl create namespace ${APPLICATION_NAMESPACE}
    ```
 
 1. Create a pull secret so that the AKS cluster is authenticated to pull image from the ACR instance.
 
    ```azurecli-interactive
-   PULL_SECRET_NAME=javaee-app-lg-sample-pull-secret
+   PULL_SECRET_NAME=javaee-app-sample-pull-secret
    kubectl create secret docker-registry ${PULL_SECRET_NAME} \
       --docker-server=${LOGIN_SERVER} \
       --docker-username=${USER_NAME} \
@@ -218,12 +220,12 @@ Follow steps below to deploy the Liberty application on the AKS cluster.
       --namespace=${APPLICATION_NAMESPACE}
    ```
 
-1. Verify the current working directory is `javaee-app-lg-sample/target` of your local clone.
+1. Verify the current working directory is `agic-aks/target` of your local clone.
 1. Run the following commands to deploy your Liberty application with 3 replicas to the AKS cluster. Command output is also shown inline.
 
    ```azurecli-interactive
-   # Create OpenLibertyApplication "javaee-app-lg-sample"
-   APPLICATION_NAME=javaee-app-lg-sample
+   # Create OpenLibertyApplication "javaee-app-sample"
+   APPLICATION_NAME=javaee-app-sample
    REPLICAS=3
 
    cat openlibertyapplication.yaml \
@@ -236,19 +238,19 @@ Follow steps below to deploy the Liberty application on the AKS cluster.
        | sed -e "s/\${NODE_LABEL_VALUE}/${NODE_LABEL_VALUE}/g" \
        | kubectl apply -f -
 
-   openlibertyapplication.openliberty.io/javaee-app-lg-sample created
+   openlibertyapplication.apps.openliberty.io/javaee-app-sample created
 
    # Check if OpenLibertyApplication instance is created
    kubectl get openlibertyapplication ${APPLICATION_NAME} -n ${APPLICATION_NAMESPACE}
 
-   NAME                        IMAGE                                                   EXPOSED   RECONCILED   AGE
-   javaee-app-lg-sample        youruniqueacrname.azurecr.io/javaee-cafe:1.0.0          True         59s
+   NAME                   IMAGE                                                   EXPOSED   RECONCILED   AGE
+   javaee-app-sample      youruniqueacrname.azurecr.io/javaee-cafe:1.0.0          True         59s
 
    # Check if deployment created by Operator is ready
    kubectl get deployment ${APPLICATION_NAME} -n ${APPLICATION_NAMESPACE} --watch
 
-   NAME                        READY   UP-TO-DATE   AVAILABLE   AGE
-   javaee-app-lg-sample        0/3     3            0           20s
+   NAME                     READY   UP-TO-DATE   AVAILABLE   AGE
+   javaee-app-sample        0/3     3            0           20s
    ```
 
 1. Wait until you see `3/3` under the `READY` column and `3` under the `AVAILABLE` column, use `CTRL-C` to stop the `kubectl` watch process.
@@ -256,8 +258,8 @@ Follow steps below to deploy the Liberty application on the AKS cluster.
 1. Run the following commands to deploy Ingress resource for routing client requests to your deployed application. Command output is also shown inline.
 
    ```azurecli-interactive
-   # Create Ingress "javaee-app-lg-sample-ingress"
-   APPLICATION_INGRESS=javaee-app-lg-sample-ingress
+   # Create Ingress "javaee-app-sample-ingress"
+   APPLICATION_INGRESS=javaee-app-sample-ingress
 
    cat appgw-cluster-ingress.yaml \
        | sed -e "s/\${APPLICATION_INGRESS}/${APPLICATION_INGRESS}/g" \
@@ -265,13 +267,13 @@ Follow steps below to deploy the Liberty application on the AKS cluster.
        | sed -e "s/\${APPLICATION_NAME}/${APPLICATION_NAME}/g" \
        | kubectl apply -f -
 
-   ingress.networking.k8s.io/javaee-app-lg-sample-ingress created
+   ingress.networking.k8s.io/javaee-app-sample-ingress created
 
    # Check if Ingress instance is created
    kubectl get ingress ${APPLICATION_INGRESS} -n ${APPLICATION_NAMESPACE}
 
-   NAME                           CLASS    HOSTS   ADDRESS        PORTS   AGE
-   javaee-app-lg-sample-ingress   <none>   *       20.62.178.13   80      17s
+   NAME                        CLASS    HOSTS   ADDRESS        PORTS   AGE
+   javaee-app-sample-ingress   <none>   *       20.62.178.13   80      17s
    ```
 
 ### Test the application
@@ -281,8 +283,8 @@ To get public IP address of the Ingress, use the [kubectl get ingress](https://k
 ```azurecli-interactive
 kubectl get ingress ${APPLICATION_INGRESS} -n ${APPLICATION_NAMESPACE} --watch
 
-NAME                           CLASS    HOSTS   ADDRESS        PORTS   AGE
-javaee-app-lg-sample-ingress   <none>   *       20.62.178.13   80      5m49s
+NAME                        CLASS    HOSTS   ADDRESS        PORTS   AGE
+javaee-app-sample-ingress   <none>   *       20.62.178.13   80      5m49s
 ```
 
 Once the *ADDRESS* represents to an actual public IP address, use `CTRL-C` to stop the `kubectl` watch process.
