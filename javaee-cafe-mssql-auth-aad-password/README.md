@@ -116,7 +116,7 @@ RESOURCE_GROUP_NAME=open-liberty-azuresql-aad-password
 az group create --name $RESOURCE_GROUP_NAME --location eastus
 
 # Create the ACR instance
-REGISTRY_NAME=lguniqueacrname
+REGISTRY_NAME=youruniqueacrname
 az acr create --resource-group $RESOURCE_GROUP_NAME --name $REGISTRY_NAME --sku Basic --admin-enabled
 export LOGIN_SERVER=$(az acr show -n $REGISTRY_NAME --query 'loginServer' -o tsv)
 USER_NAME=$(az acr credential show -n $REGISTRY_NAME --query 'username' -o tsv)
