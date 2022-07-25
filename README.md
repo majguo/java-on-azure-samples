@@ -1,6 +1,6 @@
 # Java on Azure Samples
 
-This repo is for hosting Java on Azure samples developed when engaging with customers.
+This repo is for hosting Java on Azure samples for different user scenarios.
 
 ## Disaster recovery solutions for WebLogic cluster on Azure VMs
 
