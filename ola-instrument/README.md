@@ -68,6 +68,7 @@ spec:
     targetPort: 9080
     port: 80
   env:
+  # The log format is JSON by default, setting to 'SIMPLE' will change it to be plain text which is easy for human reading.
   - name: WLP_LOGGING_CONSOLE_FORMAT
     value: SIMPLE
   - name: DD_AGENT_HOST
