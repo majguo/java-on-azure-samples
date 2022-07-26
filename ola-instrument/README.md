@@ -143,7 +143,7 @@ Wait for a while, you will observe `Failed to upload profile to ...` is reported
 [dd.trace 2022-07-26 07:03:25:300 +0000] [OkHttp http://10.224.0.4:8126/...] WARN com.datadog.profiling.uploader.ProfileUploader - Failed to upload profile to http://10.224.0.4:8126/profiling/v1/input java.net.ConnectException: Failed to connect to /10.224.0.4:8126 (Will not log errors for 5 minutes)
 ```
 
-The error seems to be caused by the fact that a datadog server is unavailable for the `OpenLibertyApplication` sample instrumented with `dd-java-agent`, which is configured using environment variable `DD_AGENT_HOST`.
+The error seems to be caused by the fact that a datadog server is unavailable for the sample instrumented with `dd-java-agent`, which is configured using environment variable `DD_AGENT_HOST`. As the image `icr.io/appcafe/open-liberty/samples/getting-started` I used in the sample is from [Open Liberty Getting Started sample](https://github.com/OpenLiberty/sample-getting-started), it seems reasonable that the sample hasn't been configured with a working `DD_AGENT_HOST`.
 
 ## Cleanup
 
