@@ -116,6 +116,14 @@ spec:
 EOF
 ```
 
+> **Note**
+> The following JVM options passed to env `JAVA_TOOL_OPTIONS` are not related to agent instrument. Instead, they're default value of `JAVA_TOOL_OPTIONS` of open liberty image, see Line 9 of [Image Layer Details - openliberty/open-liberty:latest](https://hub.docker.com/layers/open-liberty/openliberty/open-liberty/latest/images/sha256-0fd8f1ef4a324af43912fbfb6a720b9294af4be39183777490c87f40c08577a5?context=explore) as an example.
+> 
+> ```
+> -XX:+IgnoreUnrecognizedVMOptions -XX:+PortableSharedCache -XX:+IdleTuningGcOnIdle 
+> -Xshareclasses:name=openj9_system_scc,cacheDir=/opt/java/.scc,readonly,nonFatal
+> ```
+
 ## Verification
 
 Follow steps below to verify if the sample is successfully deployed and instrumented with the java agent:
