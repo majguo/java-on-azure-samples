@@ -43,7 +43,7 @@ curl -L https://raw.githubusercontent.com/OpenLiberty/open-liberty-operator/main
 
 ## Deploy a sample instrumented with the java agent
 
-Follow steps below to complete the deployment.
+The following deployment manifest is based on [Pej's sample](https://github.com/ptabasso2/springkafkacassandrak8s/blob/df93048571b26026bb5ccf3f70ec27d8f37ebe90/k8s/depl.yaml#L91-L141) and revised to make it comply with `OpenLibertyApplication` CRD supported by Open Liberty Operator.  Execute the command below to deploy an `OpenLibertyApplication` sample instrumented with the java agent.
 
 ```azurecli-interactive
 cat <<EOF | kubectl apply -f -
@@ -60,7 +60,7 @@ metadata:
     ad.datadoghq.com/demoapp.logs: '[{"source": "java", "service": "demoapp", "log_processing_rules": [{"type": "multi_line", "name": "log_start_with_date", "pattern" : "\\d{4}-(0?[1-9]|1[012])-(0?[1-9]|[12][0-9]|3[01])"}]}]'
     apm.datadoghq.com/env: '{ "DD_ENV": "dev", "DD_SERVICE": "demoapp", "DD_VERSION": "12", "DD_TRACE_ANALYTICS_ENABLED": "true" }'
 spec:
-  replicas: 2
+  replicas: 1
   applicationImage: icr.io/appcafe/open-liberty/samples/getting-started
   pullPolicy: Always
   service:
@@ -115,17 +115,40 @@ spec:
 EOF
 ```
 
-## Verification and cleanup
+## Verification
 
-To verify if the deployment succeeded, run the following commands to verify:
+Follow steps below to verify if the sample is successfully deployed and instrumented with the java agent:
 
+1. Get the list of pods associated with the sample CR which are indirectly created by Open Liberty Operator:
+
+   ```
+   kubectl get pod
+   ```
+
+1. Inspect the log of the pod whose name starts with `demoapp`:
+
+   ```
+   kubectl logs <demoapp-xxxx-xxxxx> -f
+   ```
+
+   Here is the [log sample](./log/pod.log) I captured before. You should see the [similar log entry](https://github.com/majguo/java-on-azure-samples/blob/main/ola-instrument/log/pod.log#L1) at the beginning:
+
+   ```
+   [dd.trace 2022-07-26 07:01:21:105 +0000] [dd-task-scheduler] INFO datadog.trace.agent.core.StatusLogger - DATADOG TRACER CONFIGURATION {"version":"0.104.0~a17ff6ca7f","os_name":"Linux","os_version":"5.4.0-1085-azure","architecture":"amd64","lang":"jvm","lang_version":"11.0.15","jvm_vendor":"IBM Corporation","jvm_version":"openj9-0.32.0","java_class_version":"55.0","http_nonProxyHosts":"null","http_proxyHost":"null","enabled":true,"service":"demoapp","agent_url":"http://10.224.0.4:8126","agent_error":true,"debug":false,"analytics_enabled":false,"sample_rate":1.0,"sampling_rules":[{},{}],"priority_sampling_enabled":true,"logs_correlation_enabled":true,"profiling_enabled":true,"appsec_enabled":false,"dd_version":"0.104.0~a17ff6ca7f","health_checks_enabled":true,"configuration_file":"no config file present","runtime_id":"50178bea-a266-460c-8048-9c046159d316","logging_settings":{"levelInBrackets":false,"dateTimeFormat":"'[dd.trace 'yyyy-MM-dd HH:mm:ss:SSS Z']'","logFile":"System.err","configurationFile":"simplelogger.properties","showShortLogName":false,"showDateTime":true,"showLogName":true,"showThreadName":true,"defaultLogLevel":"INFO","warnLevelString":"WARN","embedException":false},"cws_enabled":false,"cws_tls_refresh":5000}
+   ``` 
+
+Wait for a while, you will observe `Failed to upload profile to ...` is reported in the log. Here is the [similar log entry](https://github.com/majguo/java-on-azure-samples/blob/main/ola-instrument/log/pod.log#L58) in the [log sample](./log/pod.log):
+
+```
+[dd.trace 2022-07-26 07:03:25:300 +0000] [OkHttp http://10.224.0.4:8126/...] WARN com.datadog.profiling.uploader.ProfileUploader - Failed to upload profile to http://10.224.0.4:8126/profiling/v1/input java.net.ConnectException: Failed to connect to /10.224.0.4:8126 (Will not log errors for 5 minutes)
+```
+
+The error seems to be caused by the fact that a datadog server is unavailable for the `OpenLibertyApplication` sample instrumented with `dd-java-agent`, which is configured using environment variable `DD_AGENT_HOST`.
+
+## Cleanup
 
 Finally, remember to clean up the resources if they're no longer needed:
 
 ```azurecli-interactive
 az group delete --name ${RESOURCE_GROUP_NAME} --yes --no-wait 
 ```
-
-## References
-
-* [ptabasso2/springkafkacassandrak8s/k8s/depl.yaml](https://github.com/ptabasso2/springkafkacassandrak8s/blob/df93048571b26026bb5ccf3f70ec27d8f37ebe90/k8s/depl.yaml#L91-L141)
