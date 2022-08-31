@@ -32,3 +32,9 @@ This [module](./agic-aks/README.md) provides guides on enabling AGIC for the AKS
 1. [Enable AGIC with AKS Add-On](./agic-aks/agic-addon.md)
 1. [Enable AGIC with Helm using service principal credentials](./agic-aks/agic-helm-sp.md)
 1. [Enable AGIC with Helm using AAD Pod Identity](./agic-aks/agic-helm-identity.md)
+
+## JBoss EAP on Azure App Service
+
+The samples below describe different use cases of JBoss EAP on Azure App Service.
+
+1. [JBoss EAP JMS sample using Message-Driven Bean](https://github.com/majguo/jboss-eap-on-app-service)
