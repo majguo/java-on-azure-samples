@@ -35,6 +35,8 @@ This [module](./agic-aks/README.md) provides guides on enabling AGIC for the AKS
 
 ## Instrument Open Liberty Application 
 
+The guidance decribes the steps on how to instrument Open Liberty Application with the java agent dd-java-agent.
+
 1. [Instrument Open Liberty Application with the java agent](./ola-instrument/README.md)
 
 ## JBoss EAP on Azure App Service
