@@ -535,7 +535,7 @@ Once you're satisfied the fail over result, you can commit the fail over for the
 
 Congrats! You have done the demonstration of the disaster recovery solution you just set up! 
 
-## Recovery Time Objective (RTO) and Recovery Point Objective (RPO)
+## Recovery Time Objective (RTO)
 
 Based on the observation during the demo, the rough RTO is about 20 mins consisting of:
 * About 4 mins for firing alert by Azure Traffic manager. Pls notice that the time varies among tests. User may also use other tool to monitor the endpoint health and trigger DR event. So this data is only for demo purpose.
@@ -543,6 +543,8 @@ Based on the observation during the demo, the rough RTO is about 20 mins consist
   * In case the PostgreSQL replica promotion is not needed in the post action if user selects other database, the time can be reduced to about 5 mins.
 * About 1 min for manually updating the data source configured in the passive cluster.
 * About 5 mins for executing recovery plan **start-secondary-managed-servers**, which includes failing over managed servers, starting managed servers and executing the post action. The time used for post action is about 2 minutes 33 seconds, which includes waiting for managed servers up and running. Pls notice that the time may vary among tests, but this data is still valid as a benchmark reference.
+
+## Recovery Point Objective (RPO)
 
 There is no exact number for RPO compared to the RTO in this guide. Since we reply on Azure Site Recovery and Azure Database for PostgreSQL and Azure NetApp Files for asynchronouslly replicating data across regions, here is some useful information:
 
