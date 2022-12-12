@@ -546,7 +546,7 @@ Based on the observation during the demo, the rough RTO is about 20 mins consist
 
 ## Recovery Point Objective (RPO)
 
-There is no exact number for RPO compared to the RTO in this guide. Since we reply on Azure Site Recovery and Azure Database for PostgreSQL and Azure NetApp Files for asynchronouslly replicating data across regions, here is some useful information:
+There is no exact number for RPO compared to the RTO in this guide. Since we reply on Azure Site Recovery and Azure Database for PostgreSQL for asynchronouslly replicating data across regions, here is some useful information:
 
 * Azure Site Recovery: [What's a crash-consistent recovery point?](https://docs.microsoft.com/azure/site-recovery/azure-to-azure-common-questions#whats-a-crash-consistent-recovery-point)
   > A crash-consistent recovery point contains on-disk data, as if you pulled the power cord from the server during the snapshot. It doesn't include anything that was in memory when the snapshot was taken.
