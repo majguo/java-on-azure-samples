@@ -51,6 +51,12 @@ The samples below describe different use cases of JBoss EAP on Azure App Service
 
 1. [JBoss EAP JMS sample using Message-Driven Bean](https://github.com/majguo/jboss-eap-on-app-service)
 
+## Quarkus on Azure
+
+The guidance decribes the steps on how to deploy and run a simple Quarkus app on Azure Spring Apps.
+
+1. [Deploy and run a simple Quarkus app on Azure Spring Apps](./quarkus/quarkus-on-asa.md)
+
 ## Other guides engaged
 
 1. [Access Azure Database for Postgresql using Managed Identities in WebSphere deployed on Azure](https://github.com/Azure-Samples/Passwordless-Connections-for-Java-Apps/tree/main/JakartaEE/websphere)
