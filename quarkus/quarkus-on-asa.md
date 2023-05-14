@@ -277,8 +277,20 @@ az spring app logs -f \
 You will see the similar output:
 
 ```
-May 12, 2023 8:39:22 AM io.quarkus.vertx.http.runtime.QuarkusErrorHandler handle
-ERROR: HTTP Request to / failed, error id: 413f56bf-19eb-4935-bc86-7704e9facaf7-5
+BUILD_IN_EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=https://asa-standard-service-2023-05-15.svc.azuremicroservices.io/eureka/eureka
+BUILD_IN_SPRING_CLOUD_CONFIG_URI=https://asa-standard-service-2023-05-15.svc.azuremicroservices.io/config
+BUILD_IN_SPRING_CLOUD_CONFIG_FAILFAST=true
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+2023-05-14 23:47:11.702Z INFO  c.m.applicationinsights.agent - Application Insights Java Agent 3.4.10 started successfully (PID 1, JVM running for 11.828 s)
+2023-05-14 23:47:11.711Z INFO  c.m.applicationinsights.agent - Java version: 11.0.18, vendor: Microsoft, home: /usr/lib/jvm/msopenjdk-11
+May 14, 2023 11:47:21 PM io.quarkus.bootstrap.runner.Timing printStartupTime
+INFO: getting-started 1.0.0-SNAPSHOT on JVM (powered by Quarkus 3.0.2.Final) started in 7.791s. Listening on: http://0.0.0.0:1025
+May 14, 2023 11:47:21 PM io.quarkus.bootstrap.runner.Timing printStartupTime
+INFO: Profile prod activated.
+May 14, 2023 11:47:21 PM io.quarkus.bootstrap.runner.Timing printStartupTime
+INFO: Installed features: [cdi, resteasy-reactive, smallrye-context-propagation, vertx]
+May 14, 2023 11:48:21 PM io.quarkus.vertx.http.runtime.QuarkusErrorHandler handle
+ERROR: HTTP Request to / failed, error id: fe886747-8a88-4c0b-83f0-fb4e978b0ece-1
 java.lang.StringIndexOutOfBoundsException: begin 5, end 3, length 67
         at java.base/java.lang.String.checkBoundsBeginEnd(String.java:3319)
         at java.base/java.lang.String.substring(String.java:1874)
@@ -296,7 +308,7 @@ java.lang.StringIndexOutOfBoundsException: begin 5, end 3, length 67
         at io.vertx.core.impl.TaskQueue.run(TaskQueue.java:76)
         at org.jboss.threads.ContextHandler$1.runWith(ContextHandler.java:18)
         at org.jboss.threads.EnhancedQueueExecutor$Task.run(EnhancedQueueExecutor.java:2513)
-        at org.jboss.threads.EnhancedQueueExecutor$ThreadBody.run(EnhancedQueueExecutor.java:1538)
+        at org.jboss.threads.EnhancedQueueExecutor$ThreadBody.run(EnhancedQueueExecutor.java:1512)
         at org.jboss.threads.DelegatingRunnable.run(DelegatingRunnable.java:29)
         at org.jboss.threads.ThreadLocalResettingRunnable.run(ThreadLocalResettingRunnable.java:29)
         at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
