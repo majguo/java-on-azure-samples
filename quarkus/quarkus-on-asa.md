@@ -134,31 +134,32 @@ az spring app deploy \
 When the deployment completes, you can retrieve the url.
 
 ```
-az spring app show \
+url=$(az spring app show \
     --resource-group ${RESOURCE_GROUP_NAME} \
     --service ${SERVICE_INSTANCE_NAME} \
     --name ${APP_NAME} \
-    --query properties.url -o tsv
+    --query properties.url -o tsv)
+echo ${url}
 ```
 
-Copy the output (e.g., `https://asa-enterprise-service-05122023-quarkus-getting-started.azuremicroservices.io`) and open it in your browser, you should see the similar home page.
+Copy the output and open it in your browser, you should see the similar home page.
 
 ![Quarkus getting-started sample app home page](./media/quarkus-getting-started-home-page.png)
 
 You can try the other two REST APIs exposed by the sample app:
 
-* REST API `/hello`, e.g.:
+* REST API `/hello`:
   
   ```
-  curl https://asa-enterprise-service-05122023-quarkus-getting-started.azuremicroservices.io/hello
+  curl ${url}/hello
   ```
 
   You should see `hello` is returned.
 
-* REST API `/hello/greeting/{name}`, e.g.:
+* REST API `/hello/greeting/{name}`:
 
   ```
-  curl https://asa-enterprise-service-05122023-quarkus-getting-started.azuremicroservices.io/hello/greeting/quarkus
+  curl ${url}/hello/greeting/quarkus
   ```
 
   You should see `hello quarkus` is returned.
@@ -256,14 +257,15 @@ az spring app deploy \
 When the deployment completes, you can retrieve the url.
 
 ```
-az spring app show \
+url=$(az spring app show \
     --resource-group ${RESOURCE_GROUP_NAME} \
     --service ${SERVICE_INSTANCE_NAME} \
     --name ${APP_NAME} \
-    --query properties.url -o tsv
+    --query properties.url -o tsv)
+echo ${url}
 ```
 
-Copy the output (e.g., `https://asa-standard-service-05122023-quarkus-getting-started.azuremicroservices.io`) and open it in your browser. However, the expected home page is not displayed. Instead, you will see `Internal Server Error`.
+Copy the output and open it in your browser. However, the expected home page is not displayed. Instead, you will see `Internal Server Error`.
 
 Run the command below to retrieve the log:
 
@@ -319,18 +321,18 @@ Since the same issue doesn't happen for the Enterprise tier, there must be somet
 
 Fortunately, you can try the other two REST APIs exposed by the sample app which are working as expected:
 
-* REST API `/hello`, e.g.:
+* REST API `/hello`:
   
   ```
-  curl https://asa-standard-service-05122023-quarkus-getting-started.azuremicroservices.io/hello
+  curl ${url}/hello
   ```
 
   You should see `hello` is returned.
 
-* REST API `/hello/greeting/{name}`, e.g.:
+* REST API `/hello/greeting/{name}`:
 
   ```
-  curl https://asa-standard-service-05122023-quarkus-getting-started.azuremicroservices.io/hello/greeting/quarkus
+  curl ${url}/hello/greeting/quarkus
   ```
 
   You should see `hello quarkus` is returned.
