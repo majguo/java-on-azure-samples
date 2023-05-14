@@ -35,12 +35,12 @@ az term accept \
     --product azure-spring-cloud-vmware-tanzu-2 \
     --plan asa-ent-hr-mtr
 
-RESOURCE_GROUP_NAME=asa-enterprise-05122023
+RESOURCE_GROUP_NAME=asa-enterprise-`date +%F`
 az group create \
     --name ${RESOURCE_GROUP_NAME} \
     --location eastus
 
-SERVICE_INSTANCE_NAME=asa-enterprise-service-05122023
+SERVICE_INSTANCE_NAME=asa-enterprise-service-`date +%F`
 az spring create \
     --resource-group ${RESOURCE_GROUP_NAME} \
     --name ${SERVICE_INSTANCE_NAME} \
@@ -50,7 +50,7 @@ az spring create \
     --enable-gateway \
     --enable-api-portal
 
-WORKSPACE_NAME=log-analytis-workspace-05122023
+WORKSPACE_NAME=log-analytis-workspace-`date +%F`
 az monitor log-analytics workspace create \
     --resource-group ${RESOURCE_GROUP_NAME} \
     --workspace-name ${WORKSPACE_NAME} \
@@ -109,7 +109,7 @@ az monitor diagnostic-settings create \
          }
        ]'
 
-APP_NAME=quarkus-getting-started-05122023
+APP_NAME=quarkus-getting-started
 az spring app create \
     --resource-group ${RESOURCE_GROUP_NAME} \
     --service ${SERVICE_INSTANCE_NAME} \
@@ -141,24 +141,24 @@ az spring app show \
     --query properties.url -o tsv
 ```
 
-Copy the output (e.g., `https://asa-enterprise-service-05122023-quarkus-getting-started-05122023.azuremicroservices.io`) and open it in your browser, you should see the similar home page.
+Copy the output (e.g., `https://asa-enterprise-service-05122023-quarkus-getting-started.azuremicroservices.io`) and open it in your browser, you should see the similar home page.
 
 ![Quarkus getting-started sample app home page](./media/quarkus-getting-started-home-page.png)
 
 You can try the other two REST APIs exposed by the sample app:
 
-* REST API `/hello`:
+* REST API `/hello`, e.g.:
   
   ```
-  curl https://asa-enterprise-service-05122023-quarkus-getting-started-05122023.azuremicroservices.io/hello
+  curl https://asa-enterprise-service-05122023-quarkus-getting-started.azuremicroservices.io/hello
   ```
 
   You should see `hello` is returned.
 
-* REST API `/hello/greeting/{name}`:
+* REST API `/hello/greeting/{name}`, e.g.:
 
   ```
-  curl https://asa-enterprise-service-05122023-quarkus-getting-started-05122023.azuremicroservices.io/hello/greeting/quarkus
+  curl https://asa-enterprise-service-05122023-quarkus-getting-started.azuremicroservices.io/hello/greeting/quarkus
   ```
 
   You should see `hello quarkus` is returned.
@@ -197,9 +197,9 @@ Follow instructions from [How to Deploy Spring Boot applications from Azure CLI]
 * For Standard tier
 
   ```
-  RESOURCE_GROUP_NAME=asa-standard-05122023
-  SERVICE_INSTANCE_NAME=asa-standard-service-05122023
-  APP_NAME=quarkus-getting-started-05122023
+  RESOURCE_GROUP_NAME=asa-standard-`date +%F`
+  SERVICE_INSTANCE_NAME=asa-standard-service-`date +%F`
+  APP_NAME=quarkus-getting-started
 
   az extension add --upgrade --name spring
   az group create --location eastus --name ${RESOURCE_GROUP_NAME}
@@ -219,9 +219,9 @@ Follow instructions from [How to Deploy Spring Boot applications from Azure CLI]
 * For Basic tier:
 
   ```
-  RESOURCE_GROUP_NAME=asa-basic-05122023
-  SERVICE_INSTANCE_NAME=asa-basic-service-05122023
-  APP_NAME=quarkus-getting-started-05122023
+  RESOURCE_GROUP_NAME=asa-basic-`date +%F`
+  SERVICE_INSTANCE_NAME=asa-basic-service-`date +%F`
+  APP_NAME=quarkus-getting-started
 
   az extension add --upgrade --name spring
   az group create --location eastus --name ${RESOURCE_GROUP_NAME}
@@ -263,7 +263,7 @@ az spring app show \
     --query properties.url -o tsv
 ```
 
-Copy the output (e.g., `https://asa-standard-service-05122023-quarkus-getting-started-05122023.azuremicroservices.io`) and open it in your browser. However, the expected home page is not displayed. Instead, you will see `Internal Server Error`.
+Copy the output (e.g., `https://asa-standard-service-05122023-quarkus-getting-started.azuremicroservices.io`) and open it in your browser. However, the expected home page is not displayed. Instead, you will see `Internal Server Error`.
 
 Run the command below to retrieve the log:
 
@@ -307,18 +307,18 @@ Since the same issue doesn't happen for the Enterprise tier, there must be somet
 
 Fortunately, you can try the other two REST APIs exposed by the sample app which are working as expected:
 
-* REST API `/hello`:
+* REST API `/hello`, e.g.:
   
   ```
-  curl https://asa-standard-service-05122023-quarkus-getting-started-05122023.azuremicroservices.io/hello
+  curl https://asa-standard-service-05122023-quarkus-getting-started.azuremicroservices.io/hello
   ```
 
   You should see `hello` is returned.
 
-* REST API `/hello/greeting/{name}`:
+* REST API `/hello/greeting/{name}`, e.g.:
 
   ```
-  curl https://asa-standard-service-05122023-quarkus-getting-started-05122023.azuremicroservices.io/hello/greeting/quarkus
+  curl https://asa-standard-service-05122023-quarkus-getting-started.azuremicroservices.io/hello/greeting/quarkus
   ```
 
   You should see `hello quarkus` is returned.
