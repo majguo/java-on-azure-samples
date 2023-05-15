@@ -13,7 +13,24 @@ cd quarkus-quickstarts/getting-started
 
 ## Deploy to ASA Enterprise tier
 
-First, build a fat-jar from the sample app.
+The port that liveness / readiness probes of the Enterprise tier ASA will detect is `8080`, which is the default http port for Quarkus app. Open the configuration file `quarkus-quickstarts/getting-started/src/main/resources/application.properties` and make sure it's in one of the following cases:
+
+* No explicit configuration for `quarkus.http.port`, for example:
+   
+  ```
+  # Quarkus Configuration file
+  # key = value
+  ```
+
+* Or the `quarkus.http.port` is explicitely configured to `8080`, for example:  
+
+  ```
+  # Quarkus Configuration file
+  # key = value
+  quarkus.http.port=8080
+  ```
+
+Then build a fat-jar from the sample app.
 
 ```
 mvn clean install -Dquarkus.package.type=uber-jar
@@ -176,11 +193,12 @@ az group delete \
 
 ## Deploy to ASA Standard/Basic tier
 
-Because the port that liveness / readiness probes of the Standard/Basic tier ASA will detect is `1025`, you need to configure it in the sample project.
+Because the port that liveness / readiness probes of the Standard/Basic tier ASA will detect is `1025`, you need to manaully configure it in the sample project. Open the configuration file `quarkus-quickstarts/getting-started/src/main/resources/application.properties` and make sure the `quarkus.http.port` is explicitely configured to `1025`, for example:  
 
 ```
-# Make sure you're located in 'quarkus-quickstarts/getting-started'
-echo "quarkus.http.port=1025" >> src/main/resources/application.properties
+# Quarkus Configuration file
+# key = value
+quarkus.http.port=1025
 ```
 
 Then build a fat-jar from the sample app.
