@@ -265,6 +265,8 @@ url=$(az spring app show \
 echo ${url}
 ```
 
+#### HTTP Request to / failed
+
 Copy the output and open it in your browser. However, the expected home page is not displayed. Instead, you will see `Internal Server Error`.
 
 Run the command below to retrieve the log:
@@ -318,6 +320,8 @@ java.lang.StringIndexOutOfBoundsException: begin 5, end 3, length 67
 ```
 
 Since the same issue doesn't happen for the Enterprise tier, there must be something different between Enterprise and Standard / Basic tier, which may be worth to be investigated further.  
+
+#### HTTP Request to /hello and /hello/greeting/{name} works
 
 Fortunately, you can try the other two REST APIs exposed by the sample app which are working as expected:
 
