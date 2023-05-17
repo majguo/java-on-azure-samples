@@ -159,7 +159,7 @@ url=$(az spring app show \
 echo ${url}
 ```
 
-Copy the output and open it in your browser, you should see the similar home page.
+Copy the output and open it in your browser, you should see the similar home page. The source is in `quarkus-quickstarts/getting-started/src/main/resources/META-INF/resources/index.html`.
 
 ![Quarkus getting-started sample app home page](./media/quarkus-getting-started-home-page.png)
 
@@ -285,7 +285,7 @@ echo ${url}
 
 #### HTTP Request to / failed
 
-Copy the output and open it in your browser. However, the expected home page is not displayed. Instead, you will see `Internal Server Error`.
+Copy the output and open it in your browser. However, the expected home page located in `quarkus-quickstarts/getting-started/src/main/resources/META-INF/resources/index.html` is not displayed. Instead, you will see `Internal Server Error`.
 
 Run the command below to retrieve the log:
 
