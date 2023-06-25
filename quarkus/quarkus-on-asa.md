@@ -121,67 +121,11 @@ url=$(az spring app show \
 echo ${url}
 ```
 
-#### HTTP Request to / failed
+Copy the output and open it in your browser, you should see the similar home page.
 
-Copy the output and open it in your browser. However, the expected home page is not displayed. Instead, you will see `Internal Server Error`.
+![Quarkus getting-started sample app home page](./media/quarkus-getting-started-home-page.png)
 
-Run the command below to retrieve the log:
-
-```
-az spring app logs -f \
-    --resource-group ${RESOURCE_GROUP_NAME} \
-    --service ${SERVICE_INSTANCE_NAME} \
-    --name ${APP_NAME}
-```
-
-You will see the similar output:
-
-```
-BUILD_IN_EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=https://asa-standard-service-2023-05-15.svc.azuremicroservices.io/eureka/eureka
-BUILD_IN_SPRING_CLOUD_CONFIG_URI=https://asa-standard-service-2023-05-15.svc.azuremicroservices.io/config
-BUILD_IN_SPRING_CLOUD_CONFIG_FAILFAST=true
-OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
-2023-05-14 23:47:11.702Z INFO  c.m.applicationinsights.agent - Application Insights Java Agent 3.4.10 started successfully (PID 1, JVM running for 11.828 s)
-2023-05-14 23:47:11.711Z INFO  c.m.applicationinsights.agent - Java version: 11.0.18, vendor: Microsoft, home: /usr/lib/jvm/msopenjdk-11
-May 14, 2023 11:47:21 PM io.quarkus.bootstrap.runner.Timing printStartupTime
-INFO: getting-started 1.0.0-SNAPSHOT on JVM (powered by Quarkus 3.0.2.Final) started in 7.791s. Listening on: http://0.0.0.0:1025
-May 14, 2023 11:47:21 PM io.quarkus.bootstrap.runner.Timing printStartupTime
-INFO: Profile prod activated.
-May 14, 2023 11:47:21 PM io.quarkus.bootstrap.runner.Timing printStartupTime
-INFO: Installed features: [cdi, resteasy-reactive, smallrye-context-propagation, vertx]
-May 14, 2023 11:48:21 PM io.quarkus.vertx.http.runtime.QuarkusErrorHandler handle
-ERROR: HTTP Request to / failed, error id: fe886747-8a88-4c0b-83f0-fb4e978b0ece-1
-java.lang.StringIndexOutOfBoundsException: begin 5, end 3, length 67
-        at java.base/java.lang.String.checkBoundsBeginEnd(String.java:3319)
-        at java.base/java.lang.String.substring(String.java:1874)
-        at io.vertx.core.file.impl.FileResolverImpl.unpackFromJarURL(FileResolverImpl.java:291)
-        at io.vertx.core.file.impl.FileResolverImpl.unpackUrlResource(FileResolverImpl.java:239)
-        at io.vertx.core.file.impl.FileResolverImpl.resolveFile(FileResolverImpl.java:162)
-        at io.vertx.core.impl.VertxImpl.resolveFile(VertxImpl.java:829)
-        at io.vertx.core.file.impl.FileSystemImpl$20.perform(FileSystemImpl.java:1135)
-        at io.vertx.core.file.impl.FileSystemImpl$20.perform(FileSystemImpl.java:1133)
-        at io.vertx.core.file.impl.FileSystemImpl$BlockingAction.handle(FileSystemImpl.java:1174)
-        at io.vertx.core.file.impl.FileSystemImpl$BlockingAction.handle(FileSystemImpl.java:1156)
-        at io.vertx.core.impl.ContextBase.lambda$null$0(ContextBase.java:137)
-        at io.vertx.core.impl.ContextInternal.dispatch(ContextInternal.java:264)
-        at io.vertx.core.impl.ContextBase.lambda$executeBlocking$1(ContextBase.java:135)
-        at io.vertx.core.impl.TaskQueue.run(TaskQueue.java:76)
-        at org.jboss.threads.ContextHandler$1.runWith(ContextHandler.java:18)
-        at org.jboss.threads.EnhancedQueueExecutor$Task.run(EnhancedQueueExecutor.java:2513)
-        at org.jboss.threads.EnhancedQueueExecutor$ThreadBody.run(EnhancedQueueExecutor.java:1512)
-        at org.jboss.threads.DelegatingRunnable.run(DelegatingRunnable.java:29)
-        at org.jboss.threads.ThreadLocalResettingRunnable.run(ThreadLocalResettingRunnable.java:29)
-        at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
-        at java.base/java.lang.Thread.run(Thread.java:829)
-```
-
-Since the same issue doesn't happen for the Enterprise tier, there must be something different between Enterprise and Standard / Basic tier, which may be worth to be investigated further.  
-
-**NOTE** Jeff Huang has already identified the root cause of the issue and pushed a fix. The fix will be rolled out to the production environment (~ 2 weeks) per ASA release process. Will retry and update the doc once the fix goes live.
-
-#### HTTP Request to /hello and /hello/greeting/{name} works
-
-Fortunately, you can try the other two REST APIs exposed by the sample app which are working as expected:
+You can try the other two REST APIs exposed by the sample app:
 
 * REST API `/hello`:
   
