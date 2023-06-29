@@ -95,9 +95,10 @@ Now push the image to a public repository in Docker Hub which can be deployed to
 Remember to replace placeholder `<DockerHub-account>` with a valid Docker Hub account before running the following commands.
 
 ```
-docker tag getting-started-native <DockerHub-account>/getting-started-native
+DOCKER_HUB_ACCOUNT=<DockerHub-account>
+docker tag getting-started-native ${DOCKER_HUB_ACCOUNT}/getting-started-native
 docker login
-docker push <DockerHub-account>/getting-started-native
+docker push ${DOCKER_HUB_ACCOUNT}/getting-started-native
 ```
 
 ### Provision an ASA Standard consumption and dedicated plan service instance
@@ -210,7 +211,6 @@ Press `Ctrl + C` to stop the sample once you complete the try and test.
 ### Deploy the custom image to the ASA Standard consumption and dedicated plan service instance
 
 We can also deploy the custom image containing the native executable to the ASA Standard consumption and dedicated plan service instance. 
-Remember to replace placeholder `<DockerHub-account>` with a valid Docker Hub account before running the following commands.
 
 ```
 az spring app create \
@@ -225,7 +225,7 @@ az spring app deploy \
   --resource-group $RESOURCE_GROUP \
   --service $AZURE_SPRING_APPS_INSTANCE \
   --name $APP_NAME-native \
-  --container-image <DockerHub-account>/getting-started-native \
+  --container-image ${DOCKER_HUB_ACCOUNT}/getting-started-native \
   --verbose
 ```
 
