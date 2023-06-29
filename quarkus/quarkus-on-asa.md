@@ -35,7 +35,7 @@ Press `Ctrl + C` to stop the sample once you complete the try and test.
 
 ## Deploy to ASA Standard consumption and dedicated plan
 
-The port that liveness / readiness probes of the ASA Standard consumption and dedicated plan will detect is `8080`, which is the default http port for Quarkus app. Open the configuration file `src/main/resources/application.properties` and make sure it's in one of the following cases:
+The port that liveness / readiness probes of the ASA Standard consumption and dedicated plan will detect is `8080` (note that currently there is a UI issue where `1025` is displayed as port number, which has been reported to the ASA team and will be fixed soon), and it is also the default http port for Quarkus app. Open the configuration file `src/main/resources/application.properties` and make sure it's in one of the following cases:
 
 * No explicit configuration for `quarkus.http.port`, for example:
    
@@ -173,6 +173,8 @@ az spring app deploy \
   --verbose
 ```
 
+Please note that the defaults for `cpu` and `memory` (`--cpu 500m --memory 1Gi`) doesn't satisfy the resource requirements of the sample app, so we need to specify them explicitly. 
+
 When the deployment completes, you can retrieve the url.
 
 ```
@@ -184,9 +186,7 @@ url=$(az spring app show \
 echo ${url}
 ```
 
-Copy the output and open it in your browser, you should see the similar home page.
-
-![Quarkus getting-started sample app home page](./media/quarkus-getting-started-home-page.png)
+Copy the output and open it in your browser, you will `Internal Server Error` displayed in the home page. This issue has been reported to the ASA team and will be fixed soon.
 
 You can try the other two REST APIs exposed by the sample app:
 
@@ -205,8 +205,6 @@ You can try the other two REST APIs exposed by the sample app:
   ```
 
   You should see `hello quarkus` is returned.
-
-Press `Ctrl + C` to stop the sample once you complete the try and test.
 
 ### Deploy the custom image to the ASA Standard consumption and dedicated plan service instance
 
@@ -228,6 +226,8 @@ az spring app deploy \
   --container-image ${DOCKER_HUB_ACCOUNT}/getting-started-native \
   --verbose
 ```
+
+Please note that the values specified for `cpu` and `memory` (`--cpu 500m --memory 1Gi`) satisfy the resource requirements of the sample app running in the native mode, which is not the case for the fat-jar deployment mentioned above. 
 
 When the deployment completes, you can retrieve the url.
 
@@ -261,8 +261,6 @@ You can try the other two REST APIs exposed by the sample app:
   ```
 
   You should see `hello quarkus` is returned.
-
-Press `Ctrl + C` to stop the sample once you complete the try and test.
 
 ### Clear up the resources
 
