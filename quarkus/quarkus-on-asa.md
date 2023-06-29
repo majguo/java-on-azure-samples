@@ -14,7 +14,7 @@ Build a fat-jar from the sample app:
 
 ```
 cd quarkus-quickstarts/getting-started
-mvn clean install -Dquarkus.package.type=uber-jar
+mvn clean package -Dquarkus.package.type=uber-jar
 ```
 
 The relative path of generated fat-jar is `target/getting-started-1.0.0-SNAPSHOT-runner.jar`.
@@ -55,7 +55,7 @@ The port that liveness / readiness probes of the ASA Standard consumption and de
 Then re-build a fat-jar from the sample app.
 
 ```
-mvn clean install -Dquarkus.package.type=uber-jar
+mvn clean package -Dquarkus.package.type=uber-jar
 ```
 
 You can also build a native executable:
@@ -287,7 +287,7 @@ quarkus.http.port=1025
 Then re-build a fat-jar from the sample app.
 
 ```
-mvn clean install -Dquarkus.package.type=uber-jar
+mvn clean package -Dquarkus.package.type=uber-jar
 ```
 
 ### Provision a Standard/Basic tier ASA instance 
@@ -418,7 +418,7 @@ The port that liveness / readiness probes of the Enterprise tier ASA will detect
 Then re-build a fat-jar from the sample app.
 
 ```
-mvn clean install -Dquarkus.package.type=uber-jar
+mvn clean package -Dquarkus.package.type=uber-jar
 ```
 
 ### Provision an Enterprise tier ASA instance 
