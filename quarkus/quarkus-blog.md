@@ -1,6 +1,6 @@
 # Communication between microservices in Azure Spring Apps and Azure Container Apps
 
-In this tutorial, you deploy two microservices, one is a back-end application running in Azure Spring Apps (ASA), the other is a front-end application running in Azure Container Apps (ACA) and makes a direct service call to the API exposed by the back-end application.
+In this tutorial, you deploy two microservices, one is a back-end application running in Azure Spring Apps (ASA), the other is a front-end application running in Azure Container Apps (ACA) which makes a direct service call to the API exposed by the back-end application.
 
 ## Deploy the back-end application in Azure Spring Apps
 
@@ -105,7 +105,6 @@ az spring app create \
   --resource-group $RESOURCE_GROUP \
   --service $AZURE_SPRING_APPS_INSTANCE \
   --name $APP_NAME \
-  --cpu 1000m --memory 2Gi \
   --workload-profile my-wlp \
   --assign-endpoint true
 
@@ -117,8 +116,6 @@ az spring app deploy \
   --artifact-path ${PATH_TO_FAT_JAR} \
   --verbose
 ```
-
-> :warning: The defaults for `cpu` and `memory` (`--cpu 500m --memory 1Gi`) doesn't satisfy the resource requirements of the sample app, so you need to specify them explicitly with bigger values. 
 
 When the deployment completes, you can retrieve the url and output the `fruits` API endpoint.
 
@@ -144,6 +141,12 @@ Copy the endpoint and open it in your browser, you should see fruits returned in
         "description": "Tropical fruit"
     }
 ]
+```
+
+Switch to the root directory where the repo is located:
+
+```
+cd ../../..
 ```
 
 ## Deploy the front-end application in Azure Container Apps
@@ -176,7 +179,7 @@ docker run -it --rm -p 3000:3000 -e API_BASE_URL=$url fruits-ui
 
 By adding the argument `-e API_BASE_URL=$url` to `docker run`, you define an environment variable for your Docker container. With this syntax, the environment variable named `API_BASE_URL` is set to the url of your back-end application.
 
-Open `http://localhost:3030` in your browser, you should see the similar page as below.
+Open `http://localhost:3000` in your browser, you should see the similar page as below.
 
 ![Fruits UI](./media/fruits-ui.png)
 
@@ -205,8 +208,7 @@ az containerapp create \
   --image ${DOCKER_HUB_ACCOUNT}/fruits-ui  \
   --target-port 3000 \
   --env-vars API_BASE_URL=$url \
-  --ingress 'external' \
-  --query properties.configuration.ingress.fqdn
+  --ingress 'external'
 ```
 
 By adding the argument `--env-vars API_BASE_URL=$url` to `az containerapp create`, you define an environment variable for your front end application. With this syntax, the environment variable named `API_BASE_URL` is set to the url of your back-end application.
