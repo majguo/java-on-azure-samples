@@ -1,0 +1,12 @@
+extends layout
+
+block content 
+    div(class="ui attached segment")
+      div(class="ui divided items")
+        each fruit in fruits
+          div(class="item")
+            div(class="content")
+              div(class="header")
+                span(class="fruit-title")=fruit.name
+              div(class="meta")
+                span(class="meta-info")=fruit.description

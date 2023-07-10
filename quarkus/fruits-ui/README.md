@@ -1,0 +1,1 @@
+Reference to https://github.com/Azure-Samples/containerapps-albumui
