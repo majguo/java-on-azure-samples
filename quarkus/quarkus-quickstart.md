@@ -48,7 +48,7 @@ Press `Ctrl + C` to stop the sample once you complete the try and test.
 
 ### Provision an ASA Standard consumption and dedicated plan service instance
 
-Follow instructions from [Quickstart: Provision an Azure Spring Apps Standard consumption and dedicated plan service instance](https://learn.microsoft.com/en-us/azure/spring-apps/quickstart-provision-standard-consumption-service-instance?tabs=Azure-CLI) to provision an ASA Standard consumption and dedicated plan service instance . Here're commands I copied and executed: 
+Follow instructions from [Quickstart: Provision an Azure Spring Apps Standard consumption and dedicated plan service instance](https://learn.microsoft.com/azure/spring-apps/quickstart-provision-standard-consumption-service-instance?tabs=Azure-CLI) to provision an ASA Standard consumption and dedicated plan service instance . Here're commands I copied and executed: 
 
 ```
 az extension add --upgrade --name containerapp
@@ -226,7 +226,7 @@ Copy the output and open it in your browser, you should see the similar page abo
 
 ![Fruits UI](./media/fruits-ui.png)
 
-### Clear up the resources
+## Clear up the resources
 
 Run the following command to clear up the resources once they're no longer needed.
 
@@ -235,3 +235,10 @@ az group delete \
   --name $RESOURCE_GROUP \
   --yes --no-wait
 ```
+
+## References
+
+* [Introduction to Azure Spring Apps - Standard consumption and dedicated plan](https://learn.microsoft.com/azure/spring-apps/overview#standard-consumption-and-dedicated-plan)
+  ![standard-consumption-plan](https://learn.microsoft.com/azure/spring-apps/media/overview/standard-consumption-plan.png#lightbox)
+* [Quickstart: Provision an Azure Spring Apps Standard consumption and dedicated plan service instance](https://learn.microsoft.com/azure/spring-apps/quickstart-provision-standard-consumption-service-instance?tabs=Azure-CLI)
+* [Tutorial: Communication between microservices in Azure Container Apps](https://learn.microsoft.com/azure/container-apps/communicate-between-microservices?tabs=bash&pivots=docker-local)
