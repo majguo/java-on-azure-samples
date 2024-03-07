@@ -58,6 +58,12 @@ The guidance decribes the steps on how to deploy and run a simple Quarkus app on
 1. [Deploy and run a simple Quarkus app on Azure Spring Apps](./quarkus/quarkus-on-asa.md)
 1. [Communication between microservices in Azure Spring Apps and Azure Container Apps](./quarkus/quarkus-quickstart.md)
 
+## Java on Azure Container Apps
+
+The guidance decribes the steps and samples on how to deploy a complete microservices application on Azure Container Apps.
+
+1. [Java on Azure Container Apps Workshop](https://github.com/majguo/azure-spring-apps-training/tree/master/aca)
+
 ## Other guides engaged
 
 1. [Access Azure Database for Postgresql using Managed Identities in WebSphere deployed on Azure](https://github.com/Azure-Samples/Passwordless-Connections-for-Java-Apps/tree/main/JakartaEE/websphere)
