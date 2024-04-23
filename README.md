@@ -68,3 +68,5 @@ The guidance decribes the steps and samples on how to deploy a complete microser
 
 1. [Access Azure Database for Postgresql using Managed Identities in WebSphere deployed on Azure](https://github.com/Azure-Samples/Passwordless-Connections-for-Java-Apps/tree/main/JakartaEE/websphere)
 1. [Deploy Spring Petclinic Angular on Azure Container Apps](https://github.com/majguo/spring-petclinic-angular#deploy-on-azure-container-apps)
+1. [OpenAI demo service using LangChain for Java](https://github.com/seanli1988/petclinic/tree/ai)
+1. [PetClinic app which talks to OpenAI service](https://github.com/seanli1988/petclinic/tree/main)
