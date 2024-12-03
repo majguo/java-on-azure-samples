@@ -18,3 +18,9 @@ buildNumber.properties
 **.factorypath
 **.classpath
 .DS_Store
+
+# IntelliJ
+.idea
+*.ipr
+*.iml
+*.iws
