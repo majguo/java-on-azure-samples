@@ -45,7 +45,7 @@ public class Routes extends RouteBuilder {
         fromF("azure-storage-blob://%s/%s?blobName=%s&serviceClient=#client", accountName, containerName, blobName)
                 .process(exchange -> {
                     InputStream is = exchange.getMessage().getBody(InputStream.class);
-                    LOG.infof("Downloaded blob content: %s", IOUtils.toString(is, StandardCharsets.UTF_8));
+                    LOG.infof("Downloaded blob %s: %s", blobName, IOUtils.toString(is, StandardCharsets.UTF_8));
                 })
                 .end();
     }
