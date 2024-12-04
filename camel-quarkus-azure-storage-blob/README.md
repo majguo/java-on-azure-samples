@@ -24,7 +24,11 @@ public class Routes extends RouteBuilder {
 
     @Override
     public void configure() {
-        // See https://learn.microsoft.com/azure/developer/java/sdk/authentication/azure-hosted-apps#defaultazurecredential
+        /**
+         *  See references:
+         *  - https://camel.apache.org/components/4.8.x/azure-storage-blob-component.html#_advanced_azure_storage_blob_configuration
+         *  - https://learn.microsoft.com/azure/developer/java/sdk/authentication/azure-hosted-apps#defaultazurecredential
+         */
         BlobServiceClient client = new BlobServiceClientBuilder()
                 .endpoint(endpoint)
                 .credential(new DefaultAzureCredentialBuilder().build())
