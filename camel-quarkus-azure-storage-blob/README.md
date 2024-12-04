@@ -41,6 +41,13 @@ public class Routes extends RouteBuilder {
 }
 ```
 
+It creates a `BlobServiceClient` with the `DefaultAzureCredentialBuilder` beforehand, and then regiter to the Camel context so that the camel component `azure-storage-blob` can use it to authenticate to Azure Storage Blob.
+
+The invoking of `new DefaultAzureCredentialBuilder().build()` creates a `DefaultAzureCredential` object, which implements `ChainedTokenCredential` including `ManagedIdentityCredential`, `SharedTokenCacheCredential`, `IntelliJCredential`, `AzureCliCredential`, `WorkloadIdentityCredential`, etc.
+The `DefaultAzureCredential` tries each credential in order until one of them successfully acquires a token.
+
+Using Microsoft Entra ID, the sample app leverages the `AzureCliCredential` locally and `WorkloadIdentityCredential` on Azure Kubernetes Service (AKS) to authenticate to Azure Storage Blob.
+
 ## Prerequisites
 
 You need the followings to run through this guide:
@@ -163,7 +170,7 @@ az acr login \
     --name $REGISTRY_NAME
 ```
 
-## Set up user-assigned managed identity
+### Set up user-assigned managed identity
 
 Create a user-assigned managed identity, which the AKS cluster uses to connect to Azure Storage Blob:
 
@@ -339,7 +346,7 @@ You should see the similar output which indicates the sample app successfully au
 
 Press `Ctrl+C` to stop the sample app.
 
-## Run the sample app in Azure Kubernetes Service
+### Run the sample app in Azure Kubernetes Service
 
 When running the sample app in AKS, the user-assigned managed identity authenticates to Azure Storage Blob using Microsoft Entra Workload ID.
 You have already set up the connection from the AKS cluster to Azure Storage Blob with Service Connector using Workload Identity.
