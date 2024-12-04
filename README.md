@@ -53,10 +53,11 @@ The samples below describe different use cases of JBoss EAP on Azure App Service
 
 ## Quarkus on Azure
 
-The guidance decribes the steps on how to deploy and run a simple Quarkus app on Azure.
+The guidance decribes the steps on how to deploy and run Quarkus app on Azure.
 
 1. [Deploy and run a simple Quarkus app on Azure Spring Apps](./quarkus/quarkus-on-asa.md)
 1. [Communication between microservices in Azure Spring Apps and Azure Container Apps](./quarkus/quarkus-quickstart.md)
+1. [Connect to Azure Storage Blob using Microsoft Entra ID](./camel-quarkus-azure-storage-blob/)
 
 ## Java on Azure Container Apps
 
