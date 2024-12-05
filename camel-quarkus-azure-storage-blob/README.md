@@ -45,7 +45,7 @@ public class Routes extends RouteBuilder {
 }
 ```
 
-It creates a `BlobServiceClient` with the `DefaultAzureCredentialBuilder` beforehand, and then regiter to the Camel context so that the camel component `azure-storage-blob` can use it to authenticate to Azure Storage Blob.
+It creates a `BlobServiceClient` with the `DefaultAzureCredentialBuilder` beforehand, and then register to the Camel context so that the camel component `azure-storage-blob` can use it to authenticate to Azure Storage Blob.
 
 The invoking of `new DefaultAzureCredentialBuilder().build()` creates a `DefaultAzureCredential` object, which implements `ChainedTokenCredential` including `ManagedIdentityCredential`, `SharedTokenCacheCredential`, `IntelliJCredential`, `AzureCliCredential`, `WorkloadIdentityCredential`, etc.
 The `DefaultAzureCredential` tries each credential in order until one of them successfully acquires a token.
