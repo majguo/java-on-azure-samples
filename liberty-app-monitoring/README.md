@@ -138,7 +138,9 @@ cd java-on-azure-samples/liberty-app-monitoring
 
 ## Building and Deploying the Application
 
-In this example, the Liberty application is instrumented with MicroProfile OpenTelemetry feature to collect telemetry data and export it to an OpenTelemetry Collector using the OpenTelemetry Protocol (OTLP). The OpenTelemetry Collector is configured to export the telemetry data to Azure Application Insights. For more information, see [OpenTelemetry Collector Agent Deployment](https://opentelemetry.io/docs/collector/deployment/agent/). 
+In this example, the Liberty application is instrumented with MicroProfile OpenTelemetry feature that collects telemetry data and exports it to an OpenTelemetry Collector using the OpenTelemetry Protocol (OTLP). The OpenTelemetry Collector is configured to export the telemetry data to Azure Application Insights. For more information, see [OpenTelemetry Collector Agent Deployment](https://opentelemetry.io/docs/collector/deployment/agent/). The idea is similar to the [managed OpenTelemetry collector in Azure Container Apps](https://learn.microsoft.com/azure/container-apps/opentelemetry-agents?tabs=azure-cli%2Carm-example), the reason why it's not used here is that the Application Insights endpoint of the managed collector doesn't accept metrics, which is listed as a [known limitation](https://learn.microsoft.com/azure/container-apps/opentelemetry-agents?tabs=azure-cli%2Carm-example#known-limitations). 
+
+You may also wonder if the OpenTelemetry java agent can be used, similar to the doc [Enable Azure Monitor OpenTelemetry for .NET, Node.js, Python, and Java applications](https://learn.microsoft.com/azure/azure-monitor/app/opentelemetry-enable?tabs=java). The benefit of using the java agent is that it can instrument the application without any code changes. However, the [Application Insights OpenTelemetry java agent](https://learn.microsoft.com/azure/azure-monitor/app/opentelemetry-enable?tabs=java#install-the-client-library) doesn't collect Open Liberty metrics, that's why it's not used in this example either.
 
 The following steps show how to build and deploy the OpenTelemetry Collector and Liberty application to Azure Container Apps.
 
@@ -237,6 +239,8 @@ echo $APP_URL
 
 You should see the Jakarta EE Cafe home page. Do interact with the application by adding, viewing, and removing coffees, which generates telemetry data and sends it to Azure Application Insights via the OpenTelemetry Collector.
 
+In this section, you deployed two Azure Container Apps for the OpenTelemetry Collector and Liberty application separately. The Liberty application exports telemetry data to the OpenTelemetry Collector through OTLP/HTTP protocol, due to the fact that Azure Container Apps just supports open HTTP port. The alternative way is to deploy the OpenTelemetry Collector as a sidecar container to the Liberty application container in the same Azure Container Apps, so they can communicate with OTLP/gRPC protocol that is more efficient than OTLP/HTTP protocol. For more information, see [Tutorial: Configure a sidecar container for a Linux app in Azure App Service](https://learn.microsoft.com/azure/app-service/tutorial-sidecar?tabs=portal).
+
 ## Monitoring the Application
 
 Open the Azure Portal and navigate to the Azure Monitor Application Insights resource you created earlier. You can monitor the Liberty application with different views backed by the telemetry data sent from the Liberty application. For example:
@@ -244,7 +248,7 @@ Open the Azure Portal and navigate to the Azure Monitor Application Insights res
 * Investigate > Application map: Shows the application components and their dependencies.
 * Investigate > Failures: Shows the failures and exceptions in the application.
 * Investigate > Performance: Shows the performance of the application.
-* Monitoring > Metrics: Shows the metrics of the application.
+* Monitoring > Metrics: Shows the metrics of the application including Open Liberty, JVM and application custom metrics.
 * Monitoring > Logs: Shows the logs and traces of the application.
 
 ## Clean Up
@@ -257,7 +261,7 @@ az group delete \
     --yes --no-wait
 ```
 
-## Resources
+## Next Steps
 
 You can learn more about Open Liberty, OpenTelemetry and Azure Monitor Application Insights from the following resources:
 
