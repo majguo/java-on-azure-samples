@@ -39,11 +39,10 @@ This [module](./agic-aks/README.md) provides guides on enabling AGIC for the AKS
 1. [Enable AGIC with Helm using service principal credentials](./agic-aks/agic-helm-sp.md)
 1. [Enable AGIC with Helm using AAD Pod Identity](./agic-aks/agic-helm-identity.md)
 
-## Instrument Open Liberty Application 
+## Open Liberty or WebSphere Liberty on Azure 
 
-The guidance decribes the steps on how to instrument Open Liberty Application with the java agent dd-java-agent.
-
-1. [Instrument Open Liberty Application with the java agent](./ola-instrument/README.md)
+1. [Instrument Open Liberty Application with the java agent](./ola-instrument/README.md): This guidance describes the steps on how to instrument Open Liberty Application with the java agent dd-java-agent.
+1. [Monitoring a Liberty application deployed on Azure Container Apps with Azure Application Insights](./liberty-app-monitoring/README.md): This guidance describes the steps on how to monitor a Liberty application deployed on Azure Container Apps with Azure Application Insights using OpenTelemetry.
 
 ## JBoss EAP on Azure App Service
 
