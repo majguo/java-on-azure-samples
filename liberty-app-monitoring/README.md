@@ -39,8 +39,8 @@ WORKSPACE_NAME=${UNIQUE_VALUE}log
 APPINSIGHTS_NAME=${UNIQUE_VALUE}appinsights
 REGISTRY_NAME=${UNIQUE_VALUE}reg
 ACA_ENV=${UNIQUE_VALUE}env
-ACA_OTEL_COLLECTOR=${UNIQUE_VALUE}acaotelcollector
-ACA_LIBERTY_APP=${UNIQUE_VALUE}acalibertyapp
+ACA_OTEL_COLLECTOR=${UNIQUE_VALUE}otelcollector
+ACA_LIBERTY_APP=${UNIQUE_VALUE}libertyapp
 ```
 
 Next, create the resource group to host Azure resources:
@@ -175,6 +175,9 @@ az containerapp create \
     --min-replicas 1
 ```
 
+> [!NOTE]
+> HTTP Port `4318` of OTEL Collector is specified for the internal ingress, so the Liberty application can communicate with the collector through the same virtual network. The gRPC port `4317` can't be used here because Azure Container Apps just supports HTTP/TCP port for ingress. If you want to use gRPC, you can deploy the OpenTelemetry Collector as a sidecar container of the Liberty application in the same Azure Container Apps, see the later section.
+
 Wait for a while until the collector is deployed, started and running.
 
 ### Building and Deploying the Liberty Application
@@ -239,7 +242,93 @@ echo $APP_URL
 
 You should see the Jakarta EE Cafe home page. Do interact with the application by adding, viewing, and removing coffees, which generates telemetry data and sends it to Azure Application Insights via the OpenTelemetry Collector.
 
-In this section, you deployed two Azure Container Apps for the OpenTelemetry Collector and Liberty application separately. The Liberty application exports telemetry data to the OpenTelemetry Collector through OTLP/HTTP protocol, due to the fact that Azure Container Apps just supports open HTTP port. The alternative way is to deploy the OpenTelemetry Collector as a sidecar container to the Liberty application container in the same Azure Container Apps, so they can communicate with OTLP/gRPC protocol that is more efficient than OTLP/HTTP protocol. For more information, see [Tutorial: Configure a sidecar container for a Linux app in Azure App Service](https://learn.microsoft.com/azure/app-service/tutorial-sidecar?tabs=portal).
+In this section, you deployed two Azure Container Apps for the OpenTelemetry Collector and Liberty application separately. The Liberty application exports telemetry data to the OpenTelemetry Collector through OTLP/HTTP protocol, due to the fact that Azure Container Apps just supports HTTP/TCP port for ingress. The alternative way is to deploy the OpenTelemetry Collector as a sidecar container to the Liberty application container in the same Azure Container Apps, so they can communicate with OTLP/gRPC protocol that is more efficient than OTLP/HTTP protocol. For more information, see [Tutorial: Configure a sidecar container for a Linux app in Azure App Service](https://learn.microsoft.com/azure/app-service/tutorial-sidecar?tabs=portal).
+
+### Deploying the OpenTelemetry Collector as a Sidecar Container of the Liberty Application
+
+Deploy the Liberty application to Azure Container Apps:
+
+```bash
+az containerapp create \
+    --resource-group $RESOURCE_GROUP_NAME \
+    --name ${ACA_LIBERTY_APP}otel \
+    --environment $ACA_ENV \
+    --image $LOGIN_SERVER/javaee-cafe-monitoring:v1 \
+    --registry-server $LOGIN_SERVER \
+    --registry-identity system \
+    --target-port 9080 \
+    --secrets \
+        dbservername=${DB_SERVER_NAME} \
+        dbname=${DB_NAME} \
+        dbuser=${DB_USER} \
+        dbpassword=${DB_PASSWORD} \
+        appinsightsconnstring=${APPLICATIONINSIGHTS_CONNECTION_STRING} \
+    --env-vars \
+        DB_SERVER_NAME=secretref:dbservername \
+        DB_NAME=secretref:dbname \
+        DB_USER=secretref:dbuser \
+        DB_PASSWORD=secretref:dbpassword \
+        OTEL_EXPORTER_OTLP_ENDPOINT=http://${ACA_OTEL_COLLECTOR} \
+        OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf \
+        OTEL_SDK_DISABLED=${OTEL_SDK_DISABLED} \
+        OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME}-otel \
+    --ingress 'external' \
+    --min-replicas 1
+```
+
+Retrieve the deployment YAML of the Liberty application:
+
+```bash
+az containerapp show \
+    --resource-group $RESOURCE_GROUP_NAME \
+    --name ${ACA_LIBERTY_APP}otel \
+    --output yaml > liberty-app-otel.yaml
+```
+
+Edit the deployment YAML to add the OpenTelemetry Collector as a sidecar container. Here you use [`yq`](https://github.com/mikefarah/yq/?tab=readme-ov-file#install) to edit the YAML file:
+
+```bash
+export ACA_OTEL_COLLECTOR=$ACA_OTEL_COLLECTOR
+export LOGIN_SERVER=$LOGIN_SERVER
+yq -i '
+    .properties.template.containers += [{
+        "name": env(ACA_OTEL_COLLECTOR),
+        "image": env(LOGIN_SERVER) + "/otel-collector",
+        "imageType": "ContainerImage",
+        "env": [{
+            "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+            "secretRef": "appinsightsconnstring"
+        }],
+        "resources": {
+            "cpu": 0.5,
+            "memory": "1Gi",
+            "ephemeralStorage": "2Gi"
+        }
+    }]
+' liberty-app-otel.yaml
+```
+
+Update the deployment YAML with the sidecar container:
+
+```bash
+az containerapp update \
+    --resource-group $RESOURCE_GROUP_NAME \
+    --name ${ACA_LIBERTY_APP}otel \
+    --yaml liberty-app-otel.yaml
+rm -rf liberty-app-otel.yaml
+```
+
+Wait for a while until the Liberty application is updated, started and running. Then get the application URL and open it in a browser:
+
+```bash
+APP_OTEL_URL=https://$(az containerapp show \
+    --resource-group $RESOURCE_GROUP_NAME \
+    --name ${ACA_LIBERTY_APP}otel \
+    --query properties.configuration.ingress.fqdn -o tsv)
+echo $APP_OTEL_URL
+```
+
+Follow the same steps as before to interact with the application and generate telemetry data, the difference is that the Liberty application now sends telemetry data to the OpenTelemetry Collector sidecar container in the same host, through OTLP/gRPC protocol.
 
 ## Monitoring the Application
 
@@ -269,3 +358,6 @@ You can learn more about Open Liberty, OpenTelemetry and Azure Monitor Applicati
 - [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/)
 - [Azure Monitor Exporter](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/azuremonitorexporter)
 - [Introduction to Application Insights with OpenTelemetry](https://learn.microsoft.com/azure/azure-monitor/app/app-insights-overview)
+- [Deploy a Java application with Open Liberty on Azure Container Apps](https://learn.microsoft.com/azure/developer/java/ee/deploy-java-liberty-app-aca?tabs=in-bash)
+- [Ingress in Azure Container Apps](https://learn.microsoft.com/azure/container-apps/ingress-overview)
+- [Tutorial: Scale a container app](https://learn.microsoft.com/azure/container-apps/tutorial-scaling?tabs=bash)
