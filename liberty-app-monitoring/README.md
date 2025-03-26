@@ -268,8 +268,6 @@ az containerapp create \
         DB_NAME=secretref:dbname \
         DB_USER=secretref:dbuser \
         DB_PASSWORD=secretref:dbpassword \
-        OTEL_EXPORTER_OTLP_ENDPOINT=http://${ACA_OTEL_COLLECTOR} \
-        OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf \
         OTEL_SDK_DISABLED=${OTEL_SDK_DISABLED} \
         OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME}-otel \
     --ingress 'external' \
