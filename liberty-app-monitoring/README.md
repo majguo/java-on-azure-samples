@@ -1,6 +1,6 @@
 # Monitoring a Liberty application deployed on Azure Container Apps with Azure Application Insights
 
-This example demonstrates how to monitor a Open Liberty or WebSphere Liberty application with Azure Application Insights using OpenTelemetry.
+This example demonstrates how to monitor a Open Liberty application with Azure Application Insights using OpenTelemetry.
 It also provides instructions on how to deploy the application to Azure Container Apps.
 
 ## Prerequisites
