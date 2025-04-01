@@ -338,6 +338,104 @@ Open the Azure Portal and navigate to the Azure Monitor Application Insights res
 * Monitoring > Metrics: Shows the metrics of the application including Open Liberty, JVM and application custom metrics.
 * Monitoring > Logs: Shows the logs and traces of the application.
 
+## Configure Health Probes using MicroProfile Health Check
+
+The Liberty application is implemented with MicroProfile Health Check feature, which provides a way to check the health of the application. You can configure the health probes in Azure Container Apps to use the MicroProfile Health Check endpoints.
+
+Retrieve the deployment YAML of the Liberty application:
+
+```bash
+az containerapp show \
+    --resource-group $RESOURCE_GROUP_NAME \
+    --name ${ACA_LIBERTY_APP} \
+    --output yaml > liberty-app-health-probes.yaml
+```
+
+Edit the deployment YAML to add health probles. Here you use [`yq`](https://github.com/mikefarah/yq/?tab=readme-ov-file#install) to edit the YAML file:
+
+```bash
+yq -i '
+    .properties.template.containers[0].probes = [{
+        "type": "Liveness",
+        "httpGet": {
+            "path": "/health/live",
+            "port": 9080
+        },
+        "initialDelaySeconds": 10,
+        "periodSeconds": 5
+    }, {
+        "type": "Readiness",
+        "httpGet": {
+            "path": "/health/ready",
+            "port": 9080
+        },
+        "initialDelaySeconds": 5,
+        "periodSeconds": 3
+    }, {
+        "type": "Startup",
+        "httpGet": {
+            "path": "/health/started",
+            "port": 9080
+        },
+        "initialDelaySeconds": 5,
+        "periodSeconds": 3
+    }]
+' liberty-app-health-probes.yaml
+```
+
+Update the deployment YAML with the health probes:
+
+```bash
+az containerapp update \
+    --resource-group $RESOURCE_GROUP_NAME \
+    --name ${ACA_LIBERTY_APP} \
+    --yaml liberty-app-health-probes.yaml
+rm -rf liberty-app-health-probes.yaml
+```
+
+Wait for a while until the Liberty application is updated, started and running. Then get the application health URL and open it in a browser:
+
+```bash
+APP_HEALTH_URL=https://$(az containerapp show \
+    --resource-group $RESOURCE_GROUP_NAME \
+    --name ${ACA_LIBERTY_APP} \
+    --query properties.configuration.ingress.fqdn -o tsv)/health
+echo $APP_HEALTH_URL
+```
+
+You should see the similar output as below:
+
+```json
+{
+  "status": "UP",
+  "checks": [
+    {
+      "name": "CafeResource Readiness Check",
+      "status": "UP",
+      "data": {
+
+      }
+    },
+    {
+      "name": "CafeResource Liveness Check",
+      "status": "UP",
+      "data": {
+
+      }
+    },
+    {
+      "name": "CafeResource Startup Check",
+      "status": "UP",
+      "data": {
+
+      }
+    }
+  ]
+}
+```
+
+Additionally, check the health probes in the Azure Portal. Navigate to the Azure Container Apps resource you created earlier, and select **Application** > **Containers** > **Health probes**. You should see the health probes you configured, including **Liveness probes**, **Readiness probes**, and **Startup probes**.
+
 ## Clean Up
 
 When you are done with the example, you can clean up the Azure resources by deleting the resource group:
@@ -359,3 +457,5 @@ You can learn more about Open Liberty, OpenTelemetry and Azure Monitor Applicati
 - [Deploy a Java application with Open Liberty on Azure Container Apps](https://learn.microsoft.com/azure/developer/java/ee/deploy-java-liberty-app-aca?tabs=in-bash)
 - [Ingress in Azure Container Apps](https://learn.microsoft.com/azure/container-apps/ingress-overview)
 - [Tutorial: Scale a container app](https://learn.microsoft.com/azure/container-apps/tutorial-scaling?tabs=bash)
+- [Adding health reports to microservices](https://openliberty.io/guides/microprofile-health.html)
+- [Health checks for microservices](https://openliberty.io/docs/latest/health-check-microservices.html)
