@@ -14,6 +14,7 @@
     <properties>
         <failOnMissingWebXml>false</failOnMissingWebXml>
         <jakartaee.api.version>10.0.0</jakartaee.api.version>
+        <microprofile.version>7.0</microprofile.version>
         <maven-war-plugin.version>3.4.0</maven-war-plugin.version>
         <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -31,6 +32,13 @@
             <groupId>jakarta.xml.bind</groupId>
             <artifactId>jakarta.xml.bind-api</artifactId>
             <version>4.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.microprofile</groupId>
+            <artifactId>microprofile</artifactId>
+            <version>${microprofile.version}</version>
+            <type>pom</type>
             <scope>provided</scope>
         </dependency>
         <dependency>

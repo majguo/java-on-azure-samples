@@ -11,6 +11,7 @@
         <feature>persistence-3.1</feature>
         <feature>sessionDatabase-1.0</feature>
         <feature>mpTelemetry-2.0</feature>
+        <feature>mpHealth-4.0</feature>
     </featureManager>
 
     <!-- Define http & https endpoints -->
